@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One in a Krillion: Highlander Edition</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: arcade-smug school-paper game; every right answer is a little event.
+   IDEA: a pixel-art dive log: a camera that sinks from a sunny sky to the trench floor as you score.
+   PICTURE: an original pixel ocean (boat flying a Highlander tartan flag, a yellow sub, six tier creatures, jellies, glow) behind a sonar console.
+   COLOUR and TYPE: sky blue to abyss black, cyan console lines, krill coral accent; Silkscreen + Space Mono.
+   LAYOUT: fixed world behind, HUD + depth ruler on top, one console column that scrolls; same on phones. */
+:root{color-scheme:dark;--d:0;--ink:#e9f8ff;--soft:#9cc3d3;--cy:#7fe0f0;--krill:#ff8a7a;--gold:#f2c94c;--panel:rgba(4,12,24,.82)}
+:root[data-theme=light],:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{background:#050a14}
+body{margin:0;color:var(--ink);font:15.5px/1.6 "Space Mono",ui-monospace,monospace;overflow-x:clip;min-height:100vh}
+#world{position:fixed;inset:0;overflow:hidden;z-index:0;background:#050a14}
+#layer{position:absolute;left:0;right:0;top:0;will-change:transform}
+.sky{position:absolute;left:0;right:0;top:0;background:linear-gradient(180deg,#5fb6e6 0%,#9fd8f2 60%,#d9f3fb 100%)}
+.sea{position:absolute;left:0;right:0;background:linear-gradient(180deg,#2aa0bf 0%,#17739a 2.5%,#0d4c74 9%,#082d4d 22%,#05192f 45%,#030d1c 75%,#02070f 100%)}
+.waves{position:absolute;left:0;right:0;height:22px;background-repeat:repeat-x;background-size:64px 22px;animation:wave 3.2s linear infinite}
+.waves.b{opacity:.55;animation-duration:5s;animation-direction:reverse;margin-top:6px}
+@keyframes wave{to{background-position-x:64px}}
+.pix{position:absolute;image-rendering:pixelated}
+.pix svg,.spr svg{display:block;width:100%;height:auto}
+.cloud{animation:drift linear infinite}
+@keyframes drift{from{transform:translateX(-25vw)}to{transform:translateX(125vw)}}
+.boat{animation:bob 2.6s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(4px) rotate(1.5deg)}}
+.ray{position:absolute;width:12vw;background:linear-gradient(180deg,rgba(220,250,255,.22),transparent);transform:skewX(-14deg);animation:ray 6s ease-in-out infinite;filter:blur(2px)}
+@keyframes ray{0%,100%{opacity:.25}50%{opacity:.8}}
+.zl{position:absolute;left:max(2vw,10px);font:700 12px Silkscreen,monospace;color:rgba(160,220,240,.45);letter-spacing:.04em}
+.zl::before{content:"";display:block;width:60px;height:2px;background:rgba(160,220,240,.3);margin-bottom:5px}
+.school{position:absolute;left:0;animation:swim linear infinite}
+.school.rev{animation-direction:reverse}.school.rev .fishes{transform:scaleX(-1)}
+@keyframes swim{from{transform:translateX(-35vw)}to{transform:translateX(120vw)}}
+.fishes{position:relative}.fishes>div{position:absolute;animation:wig 1.8s ease-in-out infinite}
+@keyframes wig{0%,100%{translate:0 0}50%{translate:0 5px}}
+.jelly{animation:jel 5s ease-in-out infinite}
+@keyframes jel{0%,100%{transform:translateY(0) scaleY(1)}40%{transform:translateY(-26px) scaleY(.88)}}
+.glow{position:absolute;width:4px;height:4px;background:#bff7ff;box-shadow:0 0 8px 3px rgba(127,224,240,.7);animation:tw 3s ease-in-out infinite}
+.glow.p{background:#ffd0f0;box-shadow:0 0 8px 3px rgba(255,138,200,.6)}
+@keyframes tw{0%,100%{opacity:.1}50%{opacity:1}}
+.kelp{transform-origin:bottom center;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+.floorlbl{position:absolute;left:50%;transform:translateX(-50%);font:700 14px Silkscreen,monospace;color:rgba(255,138,122,.7)}
+/* overlays */
+.fx{position:fixed;inset:0;pointer-events:none;z-index:2}
+#snow i{position:absolute;top:-10px;width:2px;height:2px;background:rgba(220,240,255,.55);animation:fall linear infinite}
+#snow{opacity:calc(.15 + var(--d)*.85);transition:opacity 1s}
+#snow.off{opacity:0}
+@keyframes fall{to{transform:translate(20px,110vh)}}
+#dim{position:absolute;inset:0;background:#000;opacity:0;transition:opacity .6s}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:6;background:repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%)}
+#sub{position:fixed;left:50%;top:40vh;width:76px;margin-left:-38px;z-index:3;opacity:0;transition:opacity .5s}
+#sub.on{opacity:1}
+#sub .rot{position:relative;animation:bob2 2.2s ease-in-out infinite;transition:transform .5s}
+#sub.dive .rot{animation:none;transform:rotate(-16deg)}
+#sub .beam{position:absolute;right:58%;top:55%;width:min(300px,60vw);height:170px;transform:translateY(-50%);clip-path:polygon(100% 44%,100% 56%,0 100%,0 0);background:linear-gradient(270deg,rgba(255,244,190,.5),rgba(255,244,190,0) 95%);opacity:calc(var(--lamp,0)*.9);transition:opacity 1.5s;filter:blur(1.5px);pointer-events:none}
+@keyframes bob2{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(4px) rotate(2deg)}}
+.ring{position:fixed;width:40px;height:40px;margin:-20px 0 0 -20px;border:2px solid var(--cy);border-radius:50%;z-index:2;animation:ring 1.4s ease-out forwards}
+@keyframes ring{from{transform:scale(.2);opacity:1}to{transform:scale(18);opacity:0}}
+.bub{position:fixed;z-index:3;width:6px;height:6px;border:1.5px solid rgba(220,250,255,.85);animation:bub ease-in forwards}
+@keyframes bub{to{transform:translate(var(--x),-160px);opacity:0}}
+.prt{position:fixed;z-index:7;width:34px;animation:prt cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes prt{from{transform:translate(0,0) rotate(0) scale(.4);opacity:1}to{transform:translate(var(--x),var(--y)) rotate(var(--r)) scale(1);opacity:0}}
+.dash{position:fixed;z-index:7;width:46px;animation:dash cubic-bezier(.5,0,.5,1) forwards}
+@keyframes dash{from{transform:translateX(-12vw)}to{transform:translateX(112vw)}}
+.shake{animation:shake .55s steps(2) both}
+@keyframes shake{0%{transform:translate(0)}20%{transform:translate(-7px,3px)}40%{transform:translate(6px,-4px)}60%{transform:translate(-5px,-2px)}80%{transform:translate(4px,3px)}100%{transform:translate(0)}}
+/* HUD */
+.hud{position:fixed;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px max(3vw,12px);pointer-events:none}
+.hud>*{pointer-events:auto}
+.brand{font:700 16px Silkscreen,monospace;color:#fff;text-shadow:-2px 0 rgba(255,80,140,.8),2px 0 rgba(80,230,255,.8);opacity:0;transition:opacity .5s}
+.brand.on{opacity:1}
+.read{display:flex;align-items:center;gap:10px}
+.dep{text-align:right;line-height:1.1;background:rgba(4,12,24,.75);border:2px solid rgba(127,224,240,.55);padding:5px 10px}
+.dep small{display:block;font:400 11px Silkscreen,monospace;color:var(--soft)}
+.dep b{font:700 20px Silkscreen,monospace;white-space:nowrap;color:var(--cy)}
+.iconbtn{width:44px;height:44px;background:rgba(4,12,24,.75);border:2px solid rgba(127,224,240,.55);display:grid;place-items:center;cursor:pointer;padding:9px}
+.iconbtn svg{width:22px;height:auto}
+.ruler{position:fixed;right:max(1.2vw,6px);top:124px;bottom:36px;width:34px;z-index:4;pointer-events:none}
+.ruler .tk{position:absolute;right:0;width:10px;height:2px;background:rgba(160,220,240,.6)}
+.ruler .tk.big{width:18px}
+.ruler .tk span{position:absolute;right:22px;top:-7px;font:400 10px Silkscreen,monospace;color:rgba(160,220,240,.7);white-space:nowrap}
+.ruler .ln{position:absolute;right:0;top:0;bottom:0;width:2px;background:rgba(160,220,240,.35)}
+#mark{position:absolute;right:-4px;top:0;width:14px;height:10px;margin-top:-5px;background:var(--krill);clip-path:polygon(0 50%,100% 0,100% 100%);transition:top 1.8s cubic-bezier(.45,0,.2,1)}
+/* content */
+main{position:relative;z-index:4;max-width:760px;margin:0 auto;padding:150px 20px 80px}
+main.intro{padding-top:max(12vh,90px)}
+.hero{text-align:center;min-height:calc(58vh - max(12vh,90px))}
+.title{font:700 clamp(34px,8vw,68px)/1 Silkscreen,monospace;color:#fff;margin:0;text-shadow:-3px 0 rgba(255,80,140,.85),3px 0 rgba(80,230,255,.85),0 4px 0 rgba(10,40,70,.35);animation:glitch 5s steps(1) infinite}
+@keyframes glitch{0%,92%,100%{transform:none;clip-path:none}93%{transform:translate(-4px,1px);clip-path:inset(0 0 55% 0)}95%{transform:translate(5px,-1px);clip-path:inset(40% 0 0 0)}97%{transform:translate(-2px,0)}}
+.hero .ed{font:700 clamp(13px,2.4vw,17px) Silkscreen,monospace;color:#0b4b6e;margin:12px 0 6px;letter-spacing:.1em}
+.hero p{margin:0 auto;color:#13405c;font-weight:700;max-width:46ch}
+.panel{background:var(--panel);border:2px solid rgba(127,224,240,.7);box-shadow:0 0 0 2px #02060d,8px 8px 0 rgba(0,0,0,.45);padding:clamp(18px,4vw,30px);clip-path:polygon(0 8px,8px 8px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 8px) calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 8px),0 calc(100% - 8px));animation:rise .45s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes rise{from{transform:translateY(26px);opacity:0}}
+.panel.bare{background:none;border:0;box-shadow:none;padding:0;clip-path:none}
+.panel.out{animation:sink .35s ease-in forwards}
+@keyframes sink{to{transform:translateY(40px);opacity:0}}
+h2{font:700 clamp(22px,4vw,32px)/1.15 Silkscreen,monospace;margin:0 0 10px;text-wrap:balance}
+h3{font:700 18px Silkscreen,monospace;margin:0 0 8px}
+p{margin:0 0 12px;max-width:64ch}
+.muted{color:var(--soft)}.fine{font-size:13px;color:var(--soft)}
+.ladder{display:grid;gap:6px;margin:16px 0 20px}
+.rung{display:grid;grid-template-columns:58px minmax(0,1fr) auto;align-items:center;gap:12px;padding:6px 12px 6px 6px;background:rgba(127,224,240,.05);border:1px solid rgba(127,224,240,.18);animation:rise .4s both}
+.rung .spr{width:52px}
+.rung b{font:700 15px Silkscreen,monospace;display:block;line-height:1.2}
+.rung span{font-size:13px;color:var(--soft)}
+.pts{font:700 15px Silkscreen,monospace;white-space:nowrap;text-align:right}
+.btn{appearance:none;border:2px solid var(--cy);background:rgba(127,224,240,.12);color:#fff;min-height:50px;padding:0 22px;font:700 17px Silkscreen,monospace;cursor:pointer;display:inline-flex;align-items:center;gap:12px;box-shadow:4px 4px 0 rgba(0,0,0,.5);transition:transform .08s,background .2s}
+.btn:hover{background:rgba(127,224,240,.25)}.btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 rgba(0,0,0,.5)}
+.btn.big{width:100%;justify-content:center;min-height:62px;font-size:21px}
+.btn.big .arw{animation:arw 1s steps(2) infinite}
+@keyframes arw{50%{transform:translateY(4px)}}
+.btn.alt{border-color:rgba(255,255,255,.35);background:transparent}
+.btn:focus-visible,input:focus-visible,summary:focus-visible,.iconbtn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.qhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.qnum{font:700 13px Silkscreen,monospace;color:var(--soft);white-space:nowrap}
+.o2{display:flex;align-items:center;gap:8px}
+.o2 small{font:700 12px Silkscreen,monospace;color:var(--cy)}
+.cells{display:grid;grid-template-columns:repeat(25,5px);gap:2px}
+.cells i{height:16px;background:var(--cy);transition:background .2s,opacity .2s}
+.cells i.off{background:rgba(127,224,240,.15)}
+.o2.low i:not(.off){background:var(--krill);animation:blink .5s steps(1) infinite}
+.o2.low small{color:var(--krill)}
+@keyframes blink{50%{opacity:.35}}
+.secs{font:700 22px Silkscreen,monospace;min-width:2.2ch;text-align:right}
+.prompt{font:700 clamp(24px,5vw,40px)/1.12 Silkscreen,monospace;margin:4px 0 6px;text-wrap:balance}
+.type{border-right:3px solid var(--cy);animation:caret .7s steps(1) infinite}
+@keyframes caret{50%{border-color:transparent}}
+form.ans{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+form.ans input{flex:1 1 240px;min-height:54px;border:2px solid rgba(127,224,240,.55);background:rgba(0,0,0,.35);color:#fff;font:700 18px "Space Mono",monospace;padding:0 14px;border-radius:0}
+form.ans input::placeholder{color:#6f98a8}
+.scan{display:flex;align-items:center;gap:14px;padding:30px 0;font:700 18px Silkscreen,monospace;color:var(--cy)}
+.scan .dots::after{content:"";animation:dots 1s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.rv{display:grid;grid-template-columns:190px minmax(0,1fr);gap:22px;align-items:center}
+.radar{position:relative;width:190px;aspect-ratio:1;border-radius:50%;border:2px solid rgba(127,224,240,.6);background:radial-gradient(circle,rgba(127,224,240,.08) 0 30%,transparent 31% 32%,rgba(127,224,240,.06) 33% 60%,transparent 61% 62%,rgba(127,224,240,.04) 63%);overflow:hidden}
+.radar::before{content:"";position:absolute;inset:0;background:conic-gradient(from 0deg,rgba(127,224,240,.45),transparent 25%);animation:sweep 2.4s linear infinite}
+.radar::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(127,224,240,.25);box-shadow:0 0 0 0 transparent}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.crit{position:absolute;inset:18%;display:grid;place-items:center;z-index:1}
+.crit .spr{width:100%;animation:swimin 1s cubic-bezier(.2,1.2,.4,1) both,float 2.4s ease-in-out 1s infinite}
+@keyframes swimin{from{transform:translateX(160%) scaleX(1)}60%{transform:translateX(-8%)}}
+@keyframes float{0%,100%{translate:0 0}50%{translate:0 -6px}}
+.t-clever .crit .spr{animation:swimin 1s both,puff 1.1s 1s both,float 2.4s ease-in-out 2.1s infinite}
+@keyframes puff{0%{transform:scale(1)}35%{transform:scale(1.35)}60%{transform:scale(.92)}100%{transform:scale(1)}}
+.t-deep .crit .spr{filter:drop-shadow(0 0 10px rgba(255,230,120,.6))}
+.t-krill .radar{border-color:var(--krill);box-shadow:0 0 30px rgba(255,138,122,.6),inset 0 0 30px rgba(255,138,122,.35);animation:hue 2s linear infinite}
+@keyframes hue{50%{box-shadow:0 0 50px rgba(255,220,120,.7),inset 0 0 40px rgba(255,220,120,.35)}}
+.stamp{font:700 clamp(26px,5vw,40px)/1.05 Silkscreen,monospace;color:var(--c);text-shadow:3px 3px 0 rgba(0,0,0,.5);animation:stamp .5s .55s cubic-bezier(.2,1.6,.4,1) both;margin:0}
+@keyframes stamp{from{transform:scale(2.4) rotate(-8deg);opacity:0}}
+.gain{font:700 17px Silkscreen,monospace;color:var(--gold);margin:6px 0;animation:rise .4s .8s both}
+.yours{margin:8px 0 4px;animation:rise .4s .95s both}.yours q{font-weight:700}
+.t-krill .stamp{background:linear-gradient(90deg,#ff8a7a,#ffd36e,#7fe0f0,#ff8a7a);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:stamp .5s .55s cubic-bezier(.2,1.6,.4,1) both,shine 2s linear infinite}
+@keyframes shine{to{background-position:300% 0}}
+.miss .stamp{color:#ffb4a8}
+.miss .radar .crit{filter:grayscale(1) opacity(.5)}
+.wob{animation:wob .6s both}
+@keyframes wob{20%{transform:rotate(-2deg)}40%{transform:rotate(2deg)}60%{transform:rotate(-1deg)}80%{transform:rotate(1deg)}}
+.alts{margin:16px 0;padding:12px 16px;background:rgba(127,224,240,.05);border:1px dashed rgba(127,224,240,.35);animation:rise .4s 1.1s both}
+.alts ul{margin:6px 0 0;padding-left:18px}.alts li{margin:3px 0}
+.tag{display:inline-block;font:700 11px Silkscreen,monospace;padding:1px 6px;color:#06121c;margin-left:6px;vertical-align:1px}
+.nx{animation:rise .4s 1.2s both}
+.total{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0 18px}
+.total div{padding:12px;background:rgba(127,224,240,.06);border:1px solid rgba(127,224,240,.25)}
+.total b{display:block;font:700 clamp(20px,4.4vw,30px)/1.1 Silkscreen,monospace;white-space:nowrap;color:var(--cy)}
+.total span{font-size:13px;color:var(--soft)}
+.log{display:grid;gap:6px;margin:0 0 18px}
+.log .rung{grid-template-columns:50px minmax(0,1fr) auto}.log .spr{width:44px}
+.bank{margin-top:26px}
+details{border:1px solid rgba(127,224,240,.25);margin:8px 0;background:rgba(0,0,0,.2)}
+summary{cursor:pointer;padding:12px 14px;font:700 15px Silkscreen,monospace}
+summary small{font:400 12px "Space Mono",monospace;color:var(--soft);margin-left:6px}
+.tb{padding:2px 14px 12px}
+.tb h4{display:flex;align-items:center;gap:8px;margin:10px 0 4px;font:700 14px Silkscreen,monospace}
+.tb h4 .spr{width:30px}
+.tb p{font-size:14px;color:#cfe6ee;max-width:none}
+.copied{font-size:13px;color:var(--gold);min-height:20px}
+.sr{position:absolute;left:-9999px}
+@media(max-width:600px){.rv{grid-template-columns:1fr;justify-items:start}.radar{width:150px}.total{grid-template-columns:1fr 1fr}.total div:last-child{grid-column:1/-1}.ruler .tk span{display:none}.ruler{width:20px}.brand{font-size:12px}.cells{grid-template-columns:repeat(25,3px)}main{padding-left:14px;padding-right:30px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important}#mark{transition:none}}
+
+#dark{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 38%,transparent 25%,rgba(0,0,0,.75) 100%);opacity:calc(var(--d)*1)}
+#streaks{position:fixed;inset:0;z-index:2;pointer-events:none;opacity:0;transition:opacity .5s}
+#streaks.on{opacity:1}
+#streaks i{position:absolute;top:110vh;width:2px;background:linear-gradient(rgba(200,240,255,0),rgba(200,240,255,.4));animation:streak linear infinite;animation-duration:calc(var(--sp,.8s) * var(--k,1))}
+#streaks.up i{background:linear-gradient(rgba(200,240,255,.4),rgba(200,240,255,0));animation-direction:reverse}
+@keyframes streak{from{transform:translateY(0)}to{transform:translateY(-140vh)}}
+#dread{position:fixed;left:50%;top:52vh;transform:translate(-50%,10px);z-index:5;text-align:center;opacity:0;transition:opacity .35s,transform .35s;pointer-events:none}
+#dread.on{opacity:1;transform:translate(-50%,0)}
+#dread small{display:block;font:700 13px Silkscreen,monospace;color:var(--cy);letter-spacing:.12em}
+#dread small::after{content:"";animation:dots 1s steps(4) infinite}
+#dread b{display:block;font:700 clamp(40px,9vw,72px)/1 Silkscreen,monospace;color:#fff;text-shadow:-3px 0 rgba(255,80,140,.8),3px 0 rgba(80,230,255,.8);white-space:nowrap}
+#zb{position:fixed;left:0;right:0;top:20vh;z-index:5;text-align:center;opacity:0;pointer-events:none}
+#zb.go{animation:zb 2.4s ease both}
+#zb small{display:block;font:700 12px Silkscreen,monospace;color:var(--soft);letter-spacing:.15em}
+#zb b{display:inline-block;font:700 clamp(20px,4vw,30px) Silkscreen,monospace;color:var(--gold);padding:4px 16px;border-top:2px solid rgba(242,201,76,.6);border-bottom:2px solid rgba(242,201,76,.6);background:rgba(4,12,24,.6)}
+@keyframes zb{0%{opacity:0;transform:translateX(-40px)}15%,75%{opacity:1;transform:none}100%{opacity:0;transform:translateX(40px)}}
+.sring{position:fixed;width:60px;height:14px;margin:-7px 0 0 -30px;border:2px solid #e8fbff;border-radius:50%;z-index:3;animation:sring 1s ease-out forwards}
+@keyframes sring{to{transform:scale(6,3);opacity:0}}
+.drop{position:fixed;z-index:3;background:#d6f6ff;animation:drop ease-out forwards}
+@keyframes drop{50%{transform:translate(calc(var(--x)*.6),var(--y))}100%{transform:translate(var(--x),40px);opacity:0}}
+.hero{transition:opacity .4s,transform .4s}.hero.out{opacity:0;transform:translateY(-30px)}
+.o2.paused i:not(.off){background:var(--gold);animation:none}.o2.paused small{color:var(--gold)}
+.dym{margin-top:14px;animation:rise .35s both}
+.dq{font-weight:700}
+.opts{display:grid;gap:8px;margin:10px 0 12px}
+.opt{justify-content:flex-start;text-align:left;width:100%;font-size:16px;min-height:52px;padding:8px 14px;line-height:1.25}
+.opt .key{display:inline-grid;place-items:center;flex:none;width:26px;height:26px;border:2px solid var(--cy);font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+</style>
+</head>
+<body>
+<div id="world" aria-hidden="true"><div id="layer"></div></div>
+<div class="fx" aria-hidden="true"><div id="snow" class="off"></div><div id="dark"></div><div id="dim"></div><div id="flash"></div></div>
+<div id="sub" aria-hidden="true"><div class="rot"><div class="beam"></div><div class="spr" id="subspr"></div></div></div>
+<div id="streaks" aria-hidden="true"></div>
+<div id="dread" aria-hidden="true"><small id="drl">Descending</small><b id="drn">0 m</b></div>
+<div id="zb" aria-hidden="true"></div>
+<header class="hud">
+  <div class="brand" id="brand">One in a Krillion</div>
+  <div class="read"><div class="dep" aria-live="polite"><small id="zl">Surface</small><b id="depth">0 m</b></div><button class="iconbtn" id="snd" aria-label="Sound on" aria-pressed="true"></button></div>
+</header>
+<div class="ruler" aria-hidden="true" id="ruler"></div>
+<main id="main"><div id="top"></div><section class="panel" id="stage"></section></main>
+<div class="crt" aria-hidden="true"></div>
+
+<script id="logic">
+const TIERS=[
+ {id:'plankton',name:'Plankton',pts:10,col:'#9be7c4',say:'Everybody said this one.'},
+ {id:'clever',name:'Too Clever',pts:15,col:'#f7d154',say:'You thought it was sneaky. So did everyone else.'},
+ {id:'schooler',name:'Schooler',pts:30,col:'#8fd0ff',say:'Solid. You swam past the obvious.'},
+ {id:'rare',name:'Rare',pts:60,col:'#6fd39b',say:'Uncommon, and you knew it.'},
+ {id:'deep',name:'Deep Cut',pts:85,col:'#c3b2ff',say:'Now we are in the dark.'},
+ {id:'krill',name:'One in a Krillion',pts:100,col:'#ff8a7a',say:'Almost nobody finds this one.'}];
+const TI=Object.fromEntries(TIERS.map(t=>[t.id,t]));
+
+/* Each line: Name|alias|alias#note   (a leading "=" means: don't auto-strip generic words) */
+const CATS=[
+{id:'schools',prompt:'A public high school in Northern Virginia',hint:'Fairfax, Arlington, Alexandria, Falls Church, Loudoun, Prince William, Manassas (plus Fauquier & Stafford)',
+ strip:['high','school','hs','secondary','the','of','public','for','and'],people:false,
+ nope:{'st albans':'That one is private.','gonzaga':'Private, and in D.C.','bishop ireton':'Private (Catholic).','paul vi':'Private (Catholic).','flint hill':'Private.','potomac school':'Private.','madeira':'Private.','bishop oconnell':'Private (Catholic).','wilson':'That is in D.C.','walt whitman':'Maryland!','bethesda chevy chase':'Maryland!','sidwell':'Private, and in D.C.'},
+ tiers:{
+plankton:`McLean High School|mclean|mhs
+Langley High School|langley
+Thomas Jefferson High School for Science and Technology|tj|tjhsst|thomas jefferson|jefferson|tjhs
+Marshall High School|marshall|george c marshall|george marshall
+Oakton High School|oakton
+Madison High School|madison|james madison`,
+clever:`Meridian High School|meridian|george mason high school|mason high school#Falls Church City — renamed from George Mason HS
+Washington-Liberty High School|washington liberty|wl|w l|washington lee|wlhs
+Yorktown High School|yorktown`,
+schooler:`W.T. Woodson High School|woodson|wt woodson
+Lake Braddock Secondary School|lake braddock|lb
+Robinson Secondary School|robinson|james w robinson
+West Springfield High School|west springfield|wshs
+Chantilly High School|chantilly
+Westfield High School|westfield
+Centreville High School|centreville|centerville
+Fairfax High School|fairfax
+Falls Church High School|falls church
+Annandale High School|annandale
+Herndon High School|herndon
+South Lakes High School|south lakes
+Wakefield High School|wakefield
+Justice High School|justice
+John R. Lewis High School|lewis|john r lewis|john lewis
+Edison High School|edison|thomas edison|thomas a edison
+Hayfield Secondary School|hayfield
+West Potomac High School|west potomac
+Mount Vernon High School|mount vernon|mt vernon
+South County High School|south county
+Alexandria City High School|alexandria city|tc williams|t c williams|achs|alexandria`,
+rare:`Stone Bridge High School|stone bridge|stonebridge
+Broad Run High School|broad run
+Dominion High School|dominion
+Freedom High School|freedom#There's one in Loudoun and one in Woodbridge
+Heritage High School|heritage
+Loudoun County High School|loudoun county|lchs
+Loudoun Valley High School|loudoun valley
+Park View High School|park view
+Potomac Falls High School|potomac falls
+Briar Woods High School|briar woods
+John Champe High School|champe|john champe
+Rock Ridge High School|rock ridge
+Riverside High School|riverside
+Tuscarora High School|tuscarora
+Woodgrove High School|woodgrove
+Independence High School|independence
+Lightridge High School|lightridge
+Battlefield High School|battlefield
+Patriot High School|patriot
+Colgan High School|colgan|charles j colgan
+Osbourn Park High School|osbourn park
+Forest Park High School|forest park
+Gar-Field High School|gar field|garfield
+C.D. Hylton High School|hylton|cd hylton
+Woodbridge High School|woodbridge
+Potomac High School|potomac#Prince William County
+Gainesville High School|gainesville
+Brentsville District High School|brentsville|brentsville district
+Unity Reed High School|unity reed
+Osbourn High School|osbourn#Manassas City
+Manassas Park High School|manassas park`,
+deep:`Academies of Loudoun|academies of loudoun|academy of science|aos|loudoun academy of science
+Arlington Tech|arlington career center|career center|arlington tech
+H-B Woodlawn|hb woodlawn|h b woodlawn|hb
+Fauquier High School|fauquier
+Kettle Run High School|kettle run
+Liberty High School|liberty#Bealeton, Fauquier County
+Brooke Point High School|brooke point
+Colonial Forge High School|colonial forge
+North Stafford High School|north stafford
+Stafford High School|stafford`,
+krill:`Bryant High School|bryant|bryant alternative#FCPS alternative high school
+Mountain View High School|mountain view|mountain view alternative#FCPS alternative school (also a Stafford HS)
+Arlington Community High School|arlington community|langston|langston high school continuation`}},
+
+{id:'ap',prompt:'An AP class',hint:'Any official College Board AP course.',
+ strip:['ap','advanced','placement','course','class','exam','and'],people:false,
+ nope:{'ap gym':'Sadly not real.','ap pe':'Sadly not real.','ap health':'Not an AP course.','ap algebra':'Not an AP course.','ap geometry':'Not an AP course.','ap sociology':'Not an AP course.','ap philosophy':'Not an AP course.','ap anatomy':'Not an AP course.','ap world religions':'Not an AP course.','ap creative writing':'Not an AP course.'},
+ tiers:{
+plankton:`AP Calculus AB|calc ab|calculus ab|calculus|calc
+AP Biology|bio|biology
+AP Chemistry|chem|chemistry
+AP United States History|apush|us history|ush|american history|history
+AP English Language and Composition|lang|english language|english lang|english
+AP Psychology|psych|psychology
+AP Statistics|stats|statistics|stat`,
+clever:`AP Calculus BC|calc bc|calculus bc
+AP English Literature and Composition|lit|english literature|english lit
+AP United States Government and Politics|gov|us gov|government|us government|apgov|us government politics
+AP World History: Modern|world history|apwh|world|world history modern|whap`,
+schooler:`AP Human Geography|human geo|hug|aphg|human geography|geography|geo
+AP Physics 1|physics 1|physics|physics one
+AP Environmental Science|apes|enviro|environmental science|environmental
+AP Macroeconomics|macro|macroeconomics|economics|econ
+AP Microeconomics|micro|microeconomics
+AP European History|euro|european history|apeh
+AP Computer Science A|csa|computer science a|computer science|cs a|comp sci
+AP Computer Science Principles|csp|computer science principles|cs principles
+AP Spanish Language and Culture|spanish|spanish language
+AP Precalculus|precalc|precalculus|pre calc|pre calculus`,
+rare:`AP Physics C: Mechanics|physics c|physics c mechanics|mechanics
+AP Physics 2|physics 2|physics two
+AP Comparative Government and Politics|comp gov|comparative government|comparative gov|comparative politics
+AP Art History|art history|arth
+AP French Language and Culture|french|french language
+AP Seminar|seminar|capstone seminar
+AP Music Theory|music theory|music
+AP Latin|latin
+AP Chinese Language and Culture|chinese|mandarin|chinese language
+AP African American Studies|african american studies|afam|aaas`,
+deep:`AP Physics C: Electricity and Magnetism|physics c em|e m|electricity magnetism|physics c electricity magnetism|physics c e m
+AP Research|research|capstone research
+AP German Language and Culture|german
+AP Japanese Language and Culture|japanese
+AP Italian Language and Culture|italian
+AP Spanish Literature and Culture|spanish lit|spanish literature
+AP 2-D Art and Design|2d art|2 d art|2d art design|2 d art design|2d
+AP 3-D Art and Design|3d art|3 d art|3d art design|3 d art design|3d
+AP Drawing|drawing|studio art|studio art drawing`,
+krill:`AP Cybersecurity|cybersecurity|cyber security|cyber#New pilot course
+AP Business Principles with Personal Finance|business|personal finance|business principles|business with personal finance#New course
+AP Physics B|physics b#Retired in 2014
+AP Computer Science AB|computer science ab|cs ab#Retired in 2009
+AP Latin Literature|latin literature|latin lit|vergil|latin vergil#Vergil retired 2012; Latin Lit retired 2009
+AP French Literature|french literature|french lit#Retired in 2009
+AP International English Language|international english|apiel#Retired in 2007`}},
+
+{id:'senate',prompt:'A candidate who ran in the 2026 U.S. Senate election',hint:'Nominees, primary candidates, independents, third parties and write-ins all count. Last names work.',
+ strip:['sen','senator','dr','rep','jr','sr','ii','iii','gov','governor'],people:true,
+ nope:{'ted cruz':'Not up until 2030.','cruz':'Not up until 2030.','bernie sanders':'Not up in 2026.','sanders':'Not up in 2026.','tim kaine':'Not up in 2026 — Virginia’s 2026 race was Warner vs. Mizusawa.','kaine':'Not up in 2026.','aoc':'Didn’t run for Senate.','alexandria ocasio cortez':'Didn’t run for Senate.','kamala harris':'Didn’t run for Senate.','harris':'Didn’t run for Senate.','donald trump':'Not a Senate candidate.','trump':'Not a Senate candidate.','jd vance':'Not a Senate candidate.','vance':'Not a Senate candidate.','mitch mcconnell':'Retired — didn’t run in 2026.','mcconnell':'Retired — didn’t run in 2026.','joni ernst':'Retired — didn’t run in 2026.','ernst':'Retired — didn’t run in 2026.','dick durbin':'Retired — didn’t run in 2026.','durbin':'Retired — didn’t run in 2026.','thom tillis':'Retired — didn’t run in 2026.','tillis':'Retired — didn’t run in 2026.','gary peters':'Retired — didn’t run in 2026.','tina smith':'Retired — didn’t run in 2026.','jeanne shaheen':'Retired — didn’t run in 2026.','shaheen':'Retired — didn’t run in 2026.','tommy tuberville':'Ran for governor instead.','tuberville':'Ran for governor instead.','colin allred':'Dropped out before the primary.','allred':'Dropped out before the primary.','abigail spanberger':'She ran for governor (2025).','spanberger':'She ran for governor (2025).','marco rubio':'Not a 2026 Senate candidate.','chuck schumer':'Not up until 2028.','schumer':'Not up until 2028.'},
+ tiers:{
+plankton:`Ken Paxton#R · Texas
+Susan Collins#R · Maine
+Sherrod Brown#D · Ohio special
+James Talarico#D · Texas
+John Cornyn#R · Texas (lost primary runoff)
+Jon Ossoff#D · Georgia
+Lindsey Graham#R · South Carolina (won June primary, died in July)
+Roy Cooper#D · North Carolina
+Mark Warner#D · Virginia
+Cory Booker#D · New Jersey`,
+clever:`Mary Peltola#D · Alaska
+Dan Osborn#I · Nebraska
+Jasmine Crockett#D · Texas primary
+Graham Platner#D · Maine (won primary, withdrew)
+Janet Mills#D · Maine primary
+Abdul El-Sayed#D · Michigan|el sayed|elsayed
+Mike Rogers#R · Michigan
+Ed Markey|edward markey#D · Massachusetts
+Bill Cassidy#R · Louisiana (lost primary)`,
+schooler:`Darline Graham|darline graham nordone|darline nordone#R · South Carolina
+Annie Andrews#D · South Carolina
+Ashley Moody#R · Florida special
+Jon Husted#R · Ohio special
+Mike Collins#R · Georgia
+Ashley Hinson#R · Iowa
+Josh Turek#D · Iowa
+Peggy Flanagan#DFL · Minnesota
+Michele Tafoya#R · Minnesota
+Juliana Stratton#D · Illinois
+Chris Pappas#D · New Hampshire
+John E. Sununu#R · New Hampshire
+Julia Letlow#R · Louisiana
+Andy Barr#R · Kentucky
+Charles Booker#D · Kentucky
+Troy Jackson#D · Maine
+Michael Whatley#R · North Carolina
+Dan S. Sullivan|dan sullivan|daniel sullivan#R · Alaska
+Tom Cotton#R · Arkansas
+John Hickenlooper#D · Colorado
+Chris Coons#D · Delaware
+Cindy Hyde-Smith|hyde smith#R · Mississippi
+Pete Ricketts#R · Nebraska
+Bill Hagerty#R · Tennessee
+Shelley Moore Capito|capito#R · West Virginia
+Harriet Hageman#R · Wyoming
+Ben Ray Luján|ben ray lujan|lujan#D · New Mexico
+Jeff Merkley#D · Oregon
+Jack Reed|john f reed#D · Rhode Island
+Mike Rounds#R · South Dakota
+Roger Marshall#R · Kansas
+Jim Risch#R · Idaho
+Wesley Hunt#R · Texas primary
+Daniel Cameron#R · Kentucky primary
+Raja Krishnamoorthi#D · Illinois primary
+Mallory McMorrow#D · Michigan primary
+Haley Stevens#D · Michigan primary
+Angie Craig#DFL · Minnesota primary
+Seth Moulton#D · Massachusetts primary
+Scott Brown#R · New Hampshire primary`,
+rare:`Barry Moore#R · Alabama
+Kevin Hern#R · Oklahoma
+Angie Nixon#D · Florida special
+Scott Colom#D · Mississippi
+Mark Baisley#R · Colorado
+Bert Mizusawa#R · Virginia
+Seth Bodnar#I · Montana
+Kurt Alme#R · Montana
+Ralph Norman#R · South Carolina runoff
+Buddy Carter#R · Georgia primary
+Derek Dooley#R · Georgia primary
+Nate Morris#R · Kentucky primary
+John Fleming#R · Louisiana primary
+Steve Marshall#R · Alabama primary
+Jared Hudson#R · Alabama primary
+Zach Wahls#D · Iowa primary
+Nathan Sage#D · Iowa primary
+Robin Kelly#D · Illinois primary
+Royce White#R · Minnesota primary
+Paul Dans#R · South Carolina primary
+Vikram Mansharamani#R · New Hampshire primary
+Hallie Shoffner#D · Arkansas
+Adam Hamilton#D · Kansas
+Todd Achilles#I · Idaho
+Brian Bengs#I · South Dakota
+Marquita Bradshaw#D · Tennessee
+John Deaton#R · Massachusetts
+Shiva Ayyadurai#I · Massachusetts
+Ty Pinkins#I · Mississippi
+Don Tracy#R · Illinois
+Justin Murphy#R · New Jersey
+Mike Katz|dr mike katz|michael katz#R · Delaware
+David Brock Smith#R · Oregon
+Ray McKay|raymond mckay#R · Rhode Island
+Jim Byrd|james byrd#D · Wyoming
+Rachel Fetty Anderson|fetty anderson#D · West Virginia
+Everett Wess#D · Alabama
+Jamie Davis#D · Louisiana
+Larry Marker|larry lead marker#R · New Mexico
+N'Kiyla Jasmine Thomas|jasmine thomas|nkiyla thomas#D · Oklahoma`,
+deep:`Jeff Wadlin#Libertarian · Arkansas
+Bob Chew|robert chew#Forward · Colorado
+Blake Huber#Libertarian · Colorado
+Adam Withrow#Unity · Colorado
+Chris Baum#Approval Voting · Colorado
+Matt Loesby#Libertarian · Idaho
+Natalie Fleming#I · Idaho
+Thomas Laehn#Libertarian · Iowa
+David C. Graham#Libertarian · Kansas
+Lydia Christensen|lydia lynn christensen#Libertarian · Michigan
+Tim Long#U.S. Taxpayers · Michigan
+Doug Marsh#Green · Michigan
+Walter Kristy#Natural Law · Michigan
+Rebecca Whiting#Libertarian · Minnesota
+Marisa Simonetti#I · Minnesota
+Kyle Austin#Libertarian · Montana
+Robin Richards#Nebraska Working People · Nebraska
+Mike Marvin#Legal Marijuana Now · Nebraska
+Chuck Conboy#America First · Nebraska
+Ed Laplante#Constitution · New Hampshire
+Joanne Kuniansky#Socialist Workers · New Jersey
+Veronica Fernandez#End the Corruption! · New Jersey
+Mira O'Connor|mira oconnor#I · New Mexico
+Shannon Bray#Libertarian · North Carolina
+Michael Dublin#Green · North Carolina
+Bill Redpath#Libertarian · Ohio
+Greg Levy#Socialism & Liberation · Ohio
+Curtis Stinnett#I · Oklahoma
+Sevier White#Libertarian · Oklahoma
+Chris Henry#Pacific Green · Oregon
+Gary Dye#Libertarian · Oregon
+Michael Bahry#I · Rhode Island
+Kasie Whitener#Libertarian · South Carolina
+Mark Hackett#Constitution · South Carolina
+Ted Brown#Libertarian · Texas
+S. Marshall Wilson|marshall wilson#Constitution · West Virginia
+Joe Tache#Socialism & Liberation · Massachusetts
+Richard Grayson#Green · Alaska
+Whitfield Harrington#American Center · Illinois
+Christopher Todd Campbell#Kentucky Party · Kentucky
+David Biery#I · Kentucky
+Diana Onyejiaka#D · Tennessee primary
+Alani Bankhead#D · Montana
+Dan Whitfield#D · Arkansas primary
+David Cash|david mccullough cash#D · Alabama primary
+Dale Deas#R · Alabama primary
+Jerry Heikes#R · Alaska primary
+Michael Gaynor#R · Kansas primary
+Joshua Daniel Smith#R · Iowa primary
+Zachary Jordan Brown|zachary brown#R · North Carolina primary
+Christopher Tucker#R · Oklahoma primary
+Ron Meinhardt#I · Oklahoma
+Will Barlow#D · Oregon primary
+Jake Ryan#D · Oregon primary
+Chris Capparell#D · Georgia primary
+Dantwan Watkins|dantwan samuel watkins#D · Georgia primary
+Travis Lelle#NPA · Florida special
+Neil Gillespie#NPA · Florida special
+Naomi Craine#Socialist Workers (write-in) · Illinois
+Zach McClanahan#R · Illinois primary
+Mark Lynch#R · South Carolina primary`,
+krill:`Dan J. Sullivan|daniel j sullivan#R · Alaska — the OTHER Dan Sullivan on the ballot
+Sid Hill#Write-in · Alaska
+Heather McElwain#Write-in · Alaska
+James Michael Ryan#R · Alaska primary
+Ryan Apelbaum#Write-in · Colorado
+Will Powers#Write-in · Colorado
+Don Willoughby#Write-in · Colorado
+John Shulli#Write-in · Delaware
+Travis Jack Stevens#Write-in · Delaware
+William McVay#Write-in · Delaware
+Al Bartell#Write-in · Georgia
+Christina Clement#Write-in · Georgia
+Cazz Easton#Write-in · Georgia
+Tom Murphy#Write-in · Kentucky
+Brent Andrews#Write-in · Maine
+Ashley James Webb#Write-in · Maine
+Mike Turcotte#Write-in · Maine
+Gina Oswald#Write-in · Maine
+Sigrid Olson#Write-in · Maine
+Joseph Steinberger#Write-in · Maine
+Kevin Dwire#Write-in · Minnesota
+Jami Dee Woodman#Write-in · Montana
+Eduardo Castillo Nicasio#Write-in · New Jersey
+Stephen Faris#Write-in · Ohio
+Tony Holliman|tony glasses holliman#Write-in · Ohio
+Timothy Telymonde#Write-in · Ohio
+Robert Thomas Jones#I · Tennessee
+Tharon Chandler#I · Tennessee
+Andrew Gerena|jeranimo gerena#I · Tennessee
+Barcy Whitson#I · Tennessee
+Jeremy Hearn#I · Tennessee
+David Sutman#I · Tennessee
+Yoshi Matthews|yoshi dawn matthews#I · Tennessee
+James Macon#I · Tennessee
+Avery Ayers#Write-in · Texas
+Jade Simmons|jade smalls simmons#Write-in · Texas
+Brad Hall#Write-in · Texas
+Zul Mohamed|zul mirza mohamed#Write-in · Texas
+Rio Phillips#Write-in · West Virginia`}},
+
+{id:'flags',prompt:'A country with blue in its flag',hint:'Any shade of blue counts, even a tiny bit.',
+ strip:['the','republic','of','flag'],people:false,
+ nope:{'england':'St George’s Cross is red and white — no blue!','wales':'Green, white and a red dragon. No blue.','canada':'Red and white only.','germany':'Black, red, gold.','japan':'Red and white only.','italy':'Green, white, red.','mexico':'Green, white, red.','china':'Red and yellow.','spain':'Red and yellow.','ireland':'Green, white, orange.','poland':'Red and white.','switzerland':'Red and white.','turkey':'Red and white.','indonesia':'Red and white.','egypt':'Red, white, black.','kenya':'Black, red, green.','nigeria':'Green and white.','jamaica':'Black, green, gold.','peru':'Red and white.','belgium':'Black, yellow, red.','denmark':'Red and white.','austria':'Red and white.','hungary':'Red, white, green.','saudi arabia':'Green and white.','pakistan':'Green and white.','singapore':'Red and white.','vietnam':'Red and yellow.',"cote divoire":'Orange, white, green.','ivory coast':'Orange, white, green.','bangladesh':'Green and red.','morocco':'Red and green.','lebanon':'Red, white, green.','iran':'Green, white, red.','iraq':'Red, white, black.','ghana':'Red, gold, green.','latvia':'Carmine and white.','lithuania':'Yellow, green, red.','bulgaria':'White, green, red.','georgia':'Red and white.','sri lanka':'No blue.','zimbabwe':'No blue.','zambia':'No blue.','uganda':'No blue.','senegal':'No blue.','mali':'No blue.','monaco':'Red and white.','malta':'Red and white.','qatar':'Maroon and white.','uae':'No blue.','united arab emirates':'No blue.','jordan':'No blue.','syria':'No blue.','sudan':'No blue.','albania':'Red and black.','belarus':'Red, green, white.','vatican':'Yellow and white.'},
+ tiers:{
+plankton:`United States|usa|us|united states of america|america
+France
+United Kingdom|uk|great britain|britain
+Greece
+Israel
+Argentina
+Brazil
+Australia
+Russia
+Ukraine`,
+clever:`Scotland#Not a sovereign state, but sure
+Netherlands|holland
+South Korea|korea|republic of korea
+Sweden
+Finland
+New Zealand
+Iceland
+Norway
+Philippines
+India#The Ashoka Chakra is navy blue`,
+schooler:`Chile
+Cuba
+Portugal
+Colombia
+Venezuela
+Ecuador
+Uruguay
+Paraguay
+Costa Rica
+Panama
+Honduras
+Nicaragua
+El Salvador
+Guatemala
+Dominican Republic
+Haiti
+Czech Republic|czechia
+Slovakia
+Slovenia
+Croatia
+Serbia
+Romania
+Estonia
+Luxembourg
+North Korea|dprk
+Thailand
+Malaysia
+Taiwan
+Mongolia
+Kazakhstan
+Uzbekistan
+South Africa
+Somalia
+Rwanda
+Tanzania`,
+rare:`Bosnia and Herzegovina|bosnia
+Kosovo
+Moldova
+Armenia
+Azerbaijan
+Liechtenstein
+San Marino
+Andorra
+Cambodia
+Laos
+Nepal
+Belize
+Bahamas|the bahamas
+Barbados
+Fiji
+Samoa
+Botswana
+Namibia
+Liberia
+Sierra Leone
+Gabon
+Ethiopia
+Democratic Republic of the Congo|drc|dr congo|congo|congo kinshasa
+Central African Republic|car
+Chad
+Cape Verde|cabo verde
+Mauritius
+Seychelles
+South Sudan
+Eritrea`,
+deep:`Eswatini|swaziland
+Djibouti
+Lesotho
+Gambia|the gambia
+Equatorial Guinea
+Comoros
+Saint Lucia|st lucia
+Saint Vincent and the Grenadines|st vincent|saint vincent
+Antigua and Barbuda|antigua
+Solomon Islands`,
+krill:`Nauru
+Tuvalu
+Kiribati
+Palau
+Marshall Islands
+Micronesia|federated states of micronesia|fsm`}},
+
+{id:'games',prompt:'A board game released after the year 2000',hint:'2001 or later. Tabletop card games count too.',
+ strip:['the','game','board','a'],people:false,
+ nope:{'catan':'Released 1995 — too early!','settlers of catan':'Released 1995 — too early!','settlers':'Released 1995 — too early!','carcassonne':'Released in 2000 — not after it!','blokus':'Released in 2000 — not after it!','monopoly':'Released 1935 — too early!','scrabble':'Released 1948 — too early!','clue':'Released 1949 — too early!','cluedo':'Released 1949 — too early!','risk':'Released 1957 — too early!','chess':'Older than all of us.','checkers':'Way too early.','sorry':'Released 1934 — too early!','candy land':'Released 1949 — too early!','chutes and ladders':'Ancient — too early!','battleship':'Way too early.','connect four':'Released 1974 — too early!','connect 4':'Released 1974 — too early!','operation':'Released 1965 — too early!','mouse trap':'Released 1963 — too early!','trivial pursuit':'Released 1981 — too early!','pictionary':'Released 1985 — too early!','apples to apples':'Released 1999 — so close!','cranium':'Released 1998 — too early!','bohnanza':'Released 1997 — too early!','uno':'Released 1971 — too early!','guess who':'Released 1979 — too early!','jenga':'Released 1983 — too early!','life':'Released 1960 — too early!','game of life':'Released 1960 — too early!','twister':'Released 1966 — too early!','hungry hungry hippos':'Released 1978 — too early!','stratego':'Way too early.','othello':'Way too early.','mancala':'Ancient — too early!','yahtzee':'Way too early.','magic the gathering':'Released 1993 — too early!','cosmic encounter':'Released 1977 — too early!','diplomacy':'Released 1959 — too early!','axis and allies':'Released 1981 — too early!','taboo':'Released 1989 — too early!','boggle':'Released 1972 — too early!','sequence':'Released 1982 — too early!','lost cities':'Released 1999 — so close!','el grande':'Released 1995 — too early!','go':'Ancient — too early!','backgammon':'Ancient — too early!','mastermind':'Released 1970 — too early!','candyland':'Released 1949 — too early!'},
+ tiers:{
+plankton:`Ticket to Ride
+Codenames
+Exploding Kittens
+Pandemic
+Wingspan
+Cards Against Humanity|cah`,
+clever:`Secret Hitler
+Gloomhaven
+Azul
+Splendor
+Terraforming Mars
+Dominion
+7 Wonders|seven wonders
+Sushi Go|sushi go party
+Unstable Unicorns
+Coup
+The Resistance: Avalon|avalon|resistance avalon
+What Do You Meme
+Monopoly Deal`,
+schooler:`Scythe
+Root
+Everdell
+Cascadia
+Dixit
+King of Tokyo
+Small World
+Power Grid
+Agricola
+Puerto Rico
+Betrayal at House on the Hill|betrayal
+Love Letter
+The Resistance|resistance
+Mysterium
+Forbidden Island
+Hanabi
+Kingdomino
+Sagrada
+Camel Up
+Machi Koro
+Qwirkle
+Telestrations
+Taco Cat Goat Cheese Pizza
+Wavelength
+Just One
+Spirit Island
+Brass: Birmingham|brass birmingham|brass
+Ark Nova
+Dune: Imperium|dune imperium
+Pandemic Legacy
+Hues and Cues
+Throw Throw Burrito
+Here to Slay
+One Night Ultimate Werewolf|one night werewolf
+Santorini
+Hive
+Patchwork
+7 Wonders Duel|seven wonders duel
+The Quacks of Quedlinburg|quacks
+Spot It|dobble
+Bananagrams`,
+rare:`Twilight Imperium
+Twilight Struggle
+The Castles of Burgundy|castles of burgundy
+Concordia
+Viticulture
+Great Western Trail
+Lords of Waterdeep
+Through the Ages
+Caverna
+Le Havre
+Stone Age
+Galaxy Trucker
+Mansions of Madness
+Eldritch Horror
+Forbidden Desert
+The Crew
+Decrypto
+Tsuro
+Jaipur
+Takenoko
+Tokaido
+Century: Spice Road|century spice road
+Lost Ruins of Arnak|arnak
+Parks
+Photosynthesis
+Tapestry
+Heat: Pedal to the Metal|heat
+Sky Team
+Harmonies
+Flamecraft
+Blood Rage
+Clank!|clank
+Istanbul
+Onitama
+Imhotep
+Kingdom Builder
+Sheriff of Nottingham
+Dead of Winter
+Risk Legacy
+Star Wars: Rebellion|star wars rebellion
+War of the Ring
+Mice and Mystics
+Descent: Journeys in the Dark|descent
+Gloomhaven: Jaws of the Lion|jaws of the lion
+Frosthaven
+Splendor Duel
+Pie Face
+Watch Ya' Mouth|watch ya mouth
+Speak Out`,
+deep:`Orléans|orleans
+Earth
+Hansa Teutonica
+Troyes
+Trajan
+Tzolk'in|tzolkin
+Lisboa
+Barrage
+On Mars
+Mage Knight
+Kemet
+Cyclades
+Inis
+Hanamikoji
+Ora et Labora
+Fields of Arle
+Kanban`,
+krill:`Age of Steam
+Antiquity
+Indonesia
+Vinhos
+The Gallerist|gallerist
+Snowdonia
+Navegador
+Food Chain Magnate`}},
+
+{id:'meds',prompt:'An over-the-counter medicine',hint:'Brand names or generic names. Must be sold without a prescription in the U.S.',
+ strip:['the','tablets','tablet','pills','pill','liquid','gel','caps','capsules','brand','otc','extra','strength','medicine'],people:false,
+ nope:{'amoxicillin':'Prescription only.','penicillin':'Prescription only.','adderall':'Prescription only.','xanax':'Prescription only.','zoloft':'Prescription only.','prozac':'Prescription only.','ozempic':'Prescription only.','lipitor':'Prescription only.','accutane':'Prescription only.','vicodin':'Prescription only.','oxycodone':'Prescription only.','ritalin':'Prescription only.','vyvanse':'Prescription only.','tamiflu':'Prescription only.','epipen':'Prescription only.','albuterol':'Prescription only.','prednisone':'Prescription only.','azithromycin':'Prescription only.','zpack':'Prescription only.','z pack':'Prescription only.','metformin':'Prescription only.','viagra':'Prescription only.','insulin':'Too complicated to count here.','ambien':'Prescription only.','codeine':'Prescription only.'},
+ tiers:{
+plankton:`Tylenol|acetaminophen|paracetamol
+Advil|ibuprofen
+Motrin
+Aspirin|bayer|bayer aspirin
+Benadryl|diphenhydramine
+NyQuil
+DayQuil`,
+clever:`Melatonin#Technically a supplement, but fine
+Claritin|loratadine
+Zyrtec|cetirizine
+Pepto-Bismol|pepto|pepto bismol
+Tums|calcium carbonate
+Aleve|naproxen
+Mucinex
+Excedrin`,
+schooler:`Allegra
+Sudafed
+Robitussin
+Imodium
+Dramamine
+MiraLAX|miralax
+Pepcid
+Prilosec
+Flonase
+Neosporin
+Hydrocortisone cream|hydrocortisone
+Midol
+Alka-Seltzer|alka seltzer
+Theraflu
+Vicks VapoRub|vicks|vaporub|vapor rub
+Delsym
+ZzzQuil|zzzquil
+Gas-X|gas x
+Afrin
+Visine
+Orajel
+Chloraseptic
+Icy Hot
+Bengay
+Rolaids
+Dulcolax
+Metamucil
+Zicam
+Nicorette
+Plan B|plan b one step
+Rogaine
+Lamisil
+Lotrimin
+Halls|halls cough drops|cough drops
+Tylenol PM
+Advil PM
+Xyzal
+Unisom
+Aspercreme
+Cortizone-10|cortizone|cortizone 10`,
+rare:`Narcan|naloxone#OTC since 2023
+Voltaren|voltaren gel|diclofenac gel#OTC since 2020
+Nexium 24HR|nexium
+Prevacid 24HR|prevacid
+Zantac 360|zantac
+Tagamet
+Nasacort
+Rhinocort
+Coricidin|coricidin hbp
+Dimetapp
+Triaminic
+Abreva
+Monistat
+Tinactin
+Differin|adapalene
+Mylanta
+Maalox
+Gaviscon
+Milk of Magnesia
+Ex-Lax|ex lax
+Senokot|senna
+Colace
+Benefiber
+Bonine|meclizine
+Preparation H|prep h
+Compound W
+Calamine lotion|calamine
+Caladryl
+Polysporin
+Bacitracin
+Salonpas
+Cepacol
+Lactaid|lactase
+Beano
+Goody's Powder|goodys|goodys powder
+BC Powder
+Sominex
+Guaifenesin
+Dextromethorphan
+Pseudoephedrine
+Phenylephrine
+Simethicone
+Loperamide
+Kaopectate
+Famotidine
+Omeprazole
+Fexofenadine
+Benzoyl peroxide
+Salicylic acid
+Minoxidil
+Pataday|olopatadine#OTC since 2020`,
+deep:`Opill|norgestrel#First OTC daily birth-control pill (2024)
+Primatene Mist#OTC epinephrine inhaler
+Bronkaid
+Nix|permethrin
+Rid|pyrethrins
+Debrox|carbamide peroxide
+AZO|azo urinary pain relief|phenazopyridine
+Uristat
+Emetrol
+Pamprin
+Lanacane
+Anbesol|benzocaine
+Oxymetazoline
+Bismuth subsalicylate
+Polyethylene glycol
+Docusate
+Bisacodyl
+Levocetirizine
+Doxylamine
+Dimenhydrinate
+Esomeprazole
+Lansoprazole
+Cimetidine
+Levonorgestrel
+Clotrimazole
+Miconazole
+Terbinafine
+Zaditor|ketotifen
+Nasal triamcinolone|triamcinolone`,
+krill:`Chlorpheniramine|chlor trimeton|chlortrimeton
+Brompheniramine
+Tolnaftate
+Docosanol
+Pramoxine
+Butenafine|lotrimin ultra
+Nizatidine|axid
+Witch hazel|tucks
+Pyrantel pamoate|pinworm medicine|reeses pinworm
+Ephedrine
+Nicotine patch|nicoderm|nicoderm cq`}},
+
+{id:'colleges',prompt:'A liberal arts college or university',hint:'Anywhere in the U.S. Big research universities don’t count.',
+ strip:['college','university','univ','of','the','at','and','in'],people:false,
+ nope:{'harvard':'Research university.','yale':'Research university.','princeton':'Research university.','stanford':'Research university.','mit':'Research university.','georgetown':'Research university.','uva':'Research university.','university of virginia':'Research university.','virginia tech':'Research university.','george mason':'Research university.','gmu':'Research university.','james madison':'Comprehensive university, not a liberal arts college.','jmu':'Comprehensive university, not a liberal arts college.','duke':'Research university.','columbia':'Research university.','brown':'Research university (open curriculum, still not an LAC).','cornell':'Cornell University is a research university. (Cornell College in Iowa, though…)','cornell university':'Research university.','dartmouth':'Research university.','upenn':'Research university.','penn':'Research university.','nyu':'Research university.','georgetown university':'Research university.','johns hopkins':'Research university.','vcu':'Research university.','umd':'Research university.','university of maryland':'Research university.','tufts':'Research university.','rice':'Research university.','vanderbilt':'Research university.','notre dame':'Research university.','boston college':'Research university.','oxford':'That’s in England. (Oxford College of Emory, though…)'},
+ tiers:{
+plankton:`Williams College|williams
+Amherst College|amherst
+Swarthmore College|swarthmore|swat
+Pomona College|pomona
+Wellesley College|wellesley
+Middlebury College|middlebury|midd`,
+clever:`William & Mary|william and mary|college of william and mary|w m|wm|w and m#Calls itself a liberal-arts-focused public university — we'll allow it
+University of Richmond|richmond
+Washington and Lee University|washington and lee|w l|wlu|w and l
+Wesleyan University|wesleyan
+Colgate University|colgate
+Bucknell University|bucknell`,
+schooler:`Bowdoin College|bowdoin
+Carleton College|carleton
+Claremont McKenna College|claremont mckenna|cmc
+Harvey Mudd College|harvey mudd|mudd|hmc
+Davidson College|davidson
+Grinnell College|grinnell
+Hamilton College|hamilton
+Haverford College|haverford
+Colby College|colby
+Bates College|bates
+Vassar College|vassar
+Smith College|smith
+Barnard College|barnard
+Bryn Mawr College|bryn mawr
+Mount Holyoke College|mount holyoke|mt holyoke
+Oberlin College|oberlin
+Kenyon College|kenyon
+Macalester College|macalester|mac
+=Colorado College|colorado college|cc
+Reed College|reed
+Lafayette College|lafayette
+Skidmore College|skidmore
+College of the Holy Cross|holy cross
+Sewanee: The University of the South|sewanee|=university of the south
+University of Mary Washington|mary washington|umw#Fredericksburg, VA
+Christopher Newport University|christopher newport|cnu#Newport News, VA`,
+rare:`Pitzer College|pitzer
+Scripps College|scripps
+Union College|union
+Trinity College|trinity#Hartford, CT
+Connecticut College|connecticut college|conn college|conncoll
+Dickinson College|dickinson
+Gettysburg College|gettysburg
+Franklin & Marshall College|franklin and marshall|f m|f and m|fandm
+Furman University|furman
+Wofford College|wofford
+Rhodes College|rhodes
+Centre College|centre|center college
+DePauw University|depauw
+Denison University|denison
+Whitman College|whitman
+Occidental College|occidental|oxy
+Bard College|bard
+Sarah Lawrence College|sarah lawrence
+St. Olaf College|st olaf|saint olaf
+The College of Wooster|wooster
+Hobart and William Smith Colleges|hobart and william smith|hobart|william smith|hws
+St. Lawrence University|st lawrence|saint lawrence
+Wheaton College|wheaton#Massachusetts or Illinois — both count
+Muhlenberg College|muhlenberg
+Spelman College|spelman
+Morehouse College|morehouse
+Berea College|berea
+Agnes Scott College|agnes scott
+Hampden-Sydney College|hampden sydney#Virginia
+Randolph-Macon College|randolph macon|r mc#Virginia
+Sweet Briar College|sweet briar#Virginia
+Hollins University|hollins#Virginia
+St. John's College|st johns|saint johns#Annapolis & Santa Fe
+St. Mary's College of Maryland|st marys|saint marys|st marys college of maryland
+Goucher College|goucher
+Lewis & Clark College|lewis and clark|lewis clark
+Hillsdale College|hillsdale
+Grove City College|grove city
+Bennington College|bennington
+Hampshire College|hampshire
+Lawrence University|lawrence
+Knox College|knox
+Beloit College|beloit
+Kalamazoo College|kalamazoo|k college
+Earlham College|earlham
+Allegheny College|allegheny
+Ursinus College|ursinus
+=Washington College|washington college#Chestertown, MD
+Southwestern University|southwestern
+Trinity University|trinity university#San Antonio, TX
+Hendrix College|hendrix
+Gustavus Adolphus College|gustavus adolphus|gustavus|gusties
+Lake Forest College|lake forest
+Augustana College|augustana
+Wabash College|wabash
+Juniata College|juniata
+New College of Florida|new college|new college florida
+Soka University of America|soka`,
+deep:`Ripon College|ripon
+Austin College|austin college
+College of the Atlantic|atlantic|coa
+UNC Asheville|unca|unc asheville|university of north carolina asheville
+SUNY Geneseo|geneseo
+Truman State University|truman state|truman
+The Evergreen State College|evergreen|evergreen state
+Ramapo College|ramapo
+Keene State College|keene state
+Saint John's University (MN)|st johns university|saint johns university|csbsju
+Oxford College of Emory|oxford college|oxford college emory
+Roanoke College|roanoke#Salem, VA
+Bridgewater College|bridgewater#Virginia
+Emory & Henry University|emory and henry#Virginia
+Randolph College|randolph#Lynchburg, VA
+Ohio Wesleyan University|ohio wesleyan|owu
+Washington & Jefferson College|washington and jefferson|w j|w and j
+Hope College|hope
+Luther College|luther
+Coe College|coe
+Albion College|albion
+Wittenberg University|wittenberg
+Hiram College|hiram
+Lycoming College|lycoming
+Principia College|principia`,
+krill:`Deep Springs College|deep springs#~30 students, on a cattle ranch in California
+=Cornell College|cornell college#Iowa — one course at a time
+Bard College at Simon's Rock|simons rock|bard simons rock
+Thomas Aquinas College|thomas aquinas
+Shimer College|shimer
+Marlboro College|marlboro
+Wells College|wells
+Lyon College|lyon
+Centenary College of Louisiana|centenary
+Wilson College|wilson college#Chambersburg, PA`}}];
+
+/* ---------- matching ---------- */
+const norm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/&/g,' and ').replace(/['’‘.!?:,"]/g,'').replace(/[^a-z0-9]+/g,' ').replace(/\bsaint\b/g,'st').replace(/\bmount\b/g,'mt').replace(/\bcenter\b/g,'centre').trim();
+const SUFFIX=new Set(['jr','sr','ii','iii','iv','dr']);
+function build(cat){
+  const sw=new Set(cat.strip);
+  const strip=k=>k.split(' ').filter(w=>!sw.has(w)).join(' ');
+  cat.stripFn=strip;cat.entries=[];cat.index=new Map();
+  const add=(k,e)=>{if(!k)return;for(const v of [k,k.replace(/ /g,'')]){if(!v)continue;if(!cat.index.has(v))cat.index.set(v,new Set());cat.index.get(v).add(e)}};
+  for(const t of TIERS){
+    for(let line of (cat.tiers[t.id]||'').split('\n')){
+      line=line.trim();if(!line)continue;
+      const [body,note]=line.split('#');const parts=body.split('|').map(s=>s.trim()).filter(Boolean);
+      let name=parts[0],ns=false;if(name.startsWith('=')){name=name.slice(1);ns=true}
+      const e={name,note:note||'',tier:t.id,pts:t.pts};cat.entries.push(e);
+      for(let a of parts){let local=ns;if(a.startsWith('=')){a=a.slice(1);local=true}
+        const k=norm(a);add(k,e);if(!local)add(strip(k),e);
+        if(cat.people){const tok=k.split(' ').filter(w=>!SUFFIX.has(w));if(tok.length>1){add(tok[tok.length-1],e);add(tok[0]+' '+tok[tok.length-1],e)}}}
+    }
+  }
+  cat.keys=[...cat.index.keys()];
+  cat.nopeMap=new Map(Object.entries(cat.nope||{}).map(([k,v])=>[norm(k),v]));
+}
+CATS.forEach(build);
+function lev(a,b,max){if(Math.abs(a.length-b.length)>max)return max+1;let p=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){const c=[i];let lo=i;for(let j=1;j<=b.length;j++){c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));lo=Math.min(lo,c[j])}if(lo>max)return max+1;p=c}return p[b.length]}
+function pick(set){return [...set].sort((a,b)=>a.pts-b.pts)[0]}
+const toks=s=>s.split(' ').filter(Boolean);
+function judge(cat,raw){
+  const k=norm(raw);if(!k)return {miss:true,msg:'No answer.'};
+  const sk=cat.stripFn(k)||k;
+  for(const t of [k,sk,k.replace(/ /g,''),sk.replace(/ /g,'')]){if(t&&cat.index.has(t))return {entry:pick(cat.index.get(t))}}
+  for(const t of [k,sk,k.replace(/ /g,'')]){if(cat.nopeMap.has(t))return {miss:true,msg:cat.nopeMap.get(t)||'Not on the list.'}}
+  /* variations: the answer contains a full accepted name ("Ticket to Ride Europe", "Children's Tylenol", "Ken Paxton of Texas") */
+  const it=new Set(toks(sk));let best=null,bl=0;
+  for(const key of cat.keys){const kt=toks(key);
+    if(kt.length===1){if(cat.people||key.length<4||!it.has(key))continue}
+    else if(!kt.every(t=>it.has(t)))continue;
+    if(key.length>bl){bl=key.length;best=pick(cat.index.get(key))}}
+  if(best&&it.size<=toks(best.name).length+3)return {entry:best,loose:true};
+  /* near misses: ask "did you mean" */
+  const q=sk.replace(/ /g,''),qt=toks(sk),sc=new Map();
+  const add=(set,v)=>{for(const e of set)if(!sc.has(e)||sc.get(e)>v)sc.set(e,v)};
+  for(const key of cat.keys){const set=cat.index.get(key);
+    if(!key.includes(' ')){
+      if(q.length>=3){const L=Math.max(q.length,key.length),max=Math.max(1,Math.floor(L/3.2)),d=lev(q,key,max);if(d<=max)add(set,d/L)}
+      if(q.length>=3&&key.length>q.length&&key.startsWith(q))add(set,.22+(key.length-q.length)/key.length*.25);
+      if(key.length>=4&&q.length>key.length&&q.startsWith(key))add(set,.3);
+    }else{for(const b of toks(key)){if(b.length<4)continue;for(const a of qt){if(a.length<4)continue;const d=lev(a,b,1);if(d<=1)add(set,.34+d*.1)}}}
+  }
+  const list=[...sc].sort((a,b)=>a[1]-b[1]||a[0].pts-b[0].pts).filter(x=>x[1]<=.5).slice(0,3).map(x=>x[0]);
+  if(list.length)return {suggest:list};
+  return {miss:true,msg:'Not on our list.'};
+}
+if(typeof module!=='undefined')module.exports={CATS,TIERS,judge,norm};
+</script>
+
+<script>
+{
+const $=id=>document.getElementById(id);
+const stage=$('stage'),layer=$('layer'),main=$('main'),subEl=$('sub');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const TOTAL=CATS.reduce((a,c)=>a+c.entries.length,0);
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+/* ---------- pixel art (original) ---------- */
+function grid(t){return t.trim().split('\n').map(r=>r.trim())}
+function px(rows,pal){if(typeof rows==='string')rows=grid(rows);const h=rows.length,w=Math.max(...rows.map(r=>r.length));let o='';
+ rows.forEach((row,y)=>{let x=0;while(x<row.length){const c=row[x];if(!pal[c]){x++;continue}let e=x;while(e<row.length&&row[e]===c)e++;o+=`<rect x="${x}" y="${y}" width="${e-x}" height="1.04" fill="${pal[c]}"/>`;x=e}});
+ return `<svg viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true">${o}</svg>`}
+function compose(w,h,parts){const g=Array.from({length:h},()=>Array(w).fill('.'));for(const [rows,ox,oy] of parts)grid(rows).forEach((r,y)=>[...r].forEach((c,x)=>{if(c!=='.'&&g[oy+y]&&ox+x<w)g[oy+y][ox+x]=c}));return g.map(r=>r.join(''))}
+const G={
+plankton:`............
+..gg....g...
+.gGGg..gGg..
+.gGGg...g...
+..gg...gg...
+......gGGg..
+..g...gGwg..
+.gGg...gg...
+..g.........`,
+clever:`....s..s..s...
+...s.yyyyy.s..
+..syyyyyyyyys.
+.syyyyyyywwyys
+.yyyyyyyywkyy.
+tyyyyyyyyyyyy.
+ttyyyyyyyyyoys
+tyylllllllyyy.
+.syllllllllys.
+..syyllllyys..
+...s.yyyyy.s..
+....s..s..s...`,
+fish:`....bbbb..
+t.bbbbbbb.
+ttbbbbbwkb
+ttbllllllb
+t.blllllb.
+....bbbb..`,
+rare:`.....hhh......
+....hhhhh.....
+....hkhkh.....
+.ff..hhh..ff..
+fff.SSSSS.fff.
+.f.SsSSsSS.f..
+..SSSsSSsSS...
+..SsSSsSSsS...
+..SSSsSSsSS...
+...SSSSSSS....
+.ff..SSS..ff..
+ff.........ff.`,
+deep:`..........LL....
+.........l......
+........l.......
+.......l........
+...dddddddd.....
+..ddddddddddd...
+tdddewddddddmm..
+tdddekdddddmWm..
+ttdddddddddmmWm.
+tddddddddddmWm..
+..ddddddddddmm..
+...dddddddd.....`,
+krill:`aa..............
+..a.a...........
+...a.a..........
+....kpppp.......
+...ppPpppppp....
+...pppPppppppp..
+....ppppPpppppt.
+.....l.l.l.pppt.
+....l.l.l.l..tt.`,
+sub:`........pp......
+........p.......
+.....xxxxxx.....
+...xxxxxxxxxx...
+..xxggxxggxxxx.r
+.xxxgGxxgGxxxxrr
+.xxxxxxxxxxxxxxr
+..XXXXXXXXXXXX..
+...tntntntntn...`,
+boat:`...........F.........
+...........FRRGN.....
+...........FGNRR.....
+...........FRRGN.....
+...........F.........
+......hhhhhFhhh......
+.....hwwhwwhwwhh.....
+bbbbbbbbbbbbbbbbbbbbb
+.bbbbbbbbbbbbbbbbbbb.
+..bbbbbbbbbbbbbbbbb..
+...bbbbbbbbbbbbbbb...`,
+jelly:`...jjjj...
+.jjJJjjjj.
+jjJJjjjjjj
+jjjjjjjjjj
+jtjtjjtjtj
+.t.t..t.t.
+.t..t.t..t
+t..t..t.t.
+.t..t.t..t
+..t.t..t..`,
+cloud:`.....cccc.......
+...cccccccc.cc..
+.ccccccccccccccc
+cccccccccccccccc
+CCCCCCCCCCCCCCCC
+.CCCCCCCCCCCCCC.`,
+rock:`....rrr.....
+..rrRRrr.r..
+.rRRrrrrrRr.
+rrrrrrrRrrrr
+rrrrrrrrrrrr`,
+kelp:`.k.
+k..
+.k.
+..k
+.k.
+k..
+.k.
+..k
+.k.
+.k.`,
+spk:`....w....
+...ww..w.
+wwwww.w..
+wwwww.w.w
+wwwww.w.w
+wwwww.w..
+...ww..w.
+....w....`,
+mute:`....w....
+...ww....
+wwwww.w.w
+wwwww..w.
+wwwww..w.
+wwwww.w.w
+...ww....
+....w....`,
+arrow:`wwwwwww
+.wwwww.
+..www..
+...w...`};
+const P={
+plankton:{g:'#4fc79a',G:'#b8f5dc',w:'#fff'},
+clever:{y:'#f7d154',l:'#fff1b8',s:'#c9971f',w:'#fff',k:'#14202e',o:'#8a4b12',t:'#e0b23a'},
+fish:{b:'#8fd0ff',l:'#d9f0ff',t:'#5fa8db',w:'#fff',k:'#0e2233'},
+rare:{h:'#7fd49f',k:'#10261c',f:'#3f9a72',S:'#4fb28a',s:'#2f7f5c'},
+deep:{L:'#fff6b0',l:'#8888b8',d:'#3e4170',e:'#c3b2ff',w:'#c3b2ff',k:'#0b0b18',m:'#14152a',W:'#f1f1ff',t:'#2c2e55'},
+krill:{a:'#ffb3a8',k:'#2a0c0c',p:'#ff7a6a',P:'#ffc0b5',l:'#ff9a8b',t:'#e85d4f'},
+sub:{x:'#f2c94c',X:'#c99a2e',g:'#7fe0f0',G:'#fff',r:'#9aa4ad',p:'#6b7680',t:'#b83a3a',n:'#14284b'},
+boat:{b:'#1b2a3a',h:'#2c4a5e',w:'#cde8f2',F:'#2a2a2a',R:'#b83a3a',G:'#1f5f3f',N:'#14284b'},
+jelly:{j:'#d8a6ff',J:'#f6ebff',t:'#b37bdc'},
+cloud:{c:'#fff',C:'#e1eef7'},rock:{r:'#151d2b',R:'#25324a'},kelp:{k:'#1f6b4f'},spk:{w:'#cfeff7'},mute:{w:'#cfeff7'},arrow:{w:'#fff'}};
+const schoolerGrid=compose(26,16,[[G.fish,2,1],[G.fish,14,5],[G.fish,4,10]]);
+const SPR={};
+for(const k of Object.keys(G))SPR[k]=px(G[k],P[k]);
+SPR.schooler=px(schoolerGrid,P.fish);
+const sprite=id=>`<div class="spr">${SPR[id]}</div>`;
+const sil=(col)=>px(G.fish,{b:col,l:col,t:col,w:col,k:col});
+
+/* ---------- sound (synthesised) ---------- */
+let AC=null,muted=false;try{muted=localStorage.getItem('krill-mute')==='1'}catch(e){}
+function ac(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}if(AC.state==='suspended')AC.resume().catch(()=>{});return AC}
+function tone(f,d,o={}){if(muted)return;const a=ac();if(!a)return;try{const t=a.currentTime+(o.delay||0),os=a.createOscillator(),g=a.createGain();os.type=o.type||'sine';os.frequency.setValueAtTime(f,t);if(o.to)os.frequency.exponentialRampToValueAtTime(o.to,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(o.vol||.12,t+.012);g.gain.exponentialRampToValueAtTime(.0001,t+d);os.connect(g).connect(a.destination);os.start(t);os.stop(t+d+.05)}catch(e){}}
+function noise(d,o={}){if(muted)return;const a=ac();if(!a)return;try{const t=a.currentTime+(o.delay||0),b=a.createBuffer(1,Math.ceil(a.sampleRate*d),a.sampleRate),ch=b.getChannelData(0);for(let i=0;i<ch.length;i++)ch[i]=Math.random()*2-1;const s=a.createBufferSource();s.buffer=b;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(o.f||900,t);if(o.to)f.frequency.exponentialRampToValueAtTime(o.to,t+d);const g=a.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(o.vol||.15,t+.03);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(f).connect(g).connect(a.destination);s.start(t);s.stop(t+d+.05)}catch(e){}}
+const NOTES=[392,440,494,523,587,659,784,880,988,1047,1175,1319];
+const SFX={
+ click(){tone(700,.05,{type:'square',vol:.035})},
+ tick(){tone(1100,.05,{type:'square',vol:.03})},
+ splash(){noise(.7,{vol:.28,f:2400,to:250})},
+ whoosh(d){noise(d,{vol:.09,f:500,to:120})},
+ ping(){tone(1400,1.2,{vol:.1,to:900});tone(1400,1,{vol:.04,to:900,delay:.4})},
+ reveal(i){const n=[0,1,2,4,6,7][i];for(let k=0;k<=Math.min(i+1,4);k++)tone(NOTES[n+k*2]||1319,.22,{type:'triangle',vol:.09,delay:k*.08})},
+ krill(){[0,2,4,7,9,11].forEach((n,k)=>tone(NOTES[n],.3,{type:'triangle',vol:.1,delay:k*.07}));for(let k=0;k<8;k++)tone(rnd(1800,3200),.12,{vol:.025,delay:.45+k*.06})},
+ miss(){tone(320,.55,{type:'sawtooth',vol:.05,to:90});noise(.4,{vol:.08,f:600,to:100})},
+ hum(d){tone(55,d,{vol:.09,to:42});tone(82,d,{vol:.04,to:70})},
+ thud(){tone(90,.5,{type:'sine',vol:.2,to:40});noise(.4,{vol:.12,f:300,to:80})},
+ hmm(){tone(520,.12,{type:'triangle',vol:.06});tone(440,.16,{type:'triangle',vol:.06,delay:.12})},
+ done(){[0,4,7,11].forEach((n,k)=>tone(NOTES[n],.4,{type:'triangle',vol:.09,delay:k*.12}))}};
+function setSnd(){const b=$('snd');b.innerHTML=muted?SPR.mute:SPR.spk;b.setAttribute('aria-pressed',String(!muted));b.setAttribute('aria-label',muted?'Sound off':'Sound on')}
+$('snd').onclick=()=>{muted=!muted;try{localStorage.setItem('krill-mute',muted?'1':'0')}catch(e){}setSnd();if(!muted)SFX.click()};setSnd();
+
+/* ---------- world ---------- */
+let H,K,SKY,FOCUS=92,camY=0;
+const ZONES=[[0,'Sunlight zone'],[200,'Twilight zone'],[1000,'Midnight zone'],[4000,'Abyssal zone'],[6000,'Hadal zone']];
+const zoneOf=m=>m>=7000?'Trench floor':ZONES.filter(z=>m>=z[0]).pop()[1];
+function buildWorld(){
+ H=innerHeight;K=H*1.25/1000;SKY=H;const FL=SKY+7000*K;
+ const wave=`url("data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 11" shape-rendering="crispEdges"><path fill="#2aa0bf" d="M0 5h4V4h4V3h8v1h4v1h4v1h8v5H0z"/><path fill="#bdf2ff" d="M8 3h8v1H8zM4 4h4v1H4zM16 4h4v1h-4zM20 5h4v1h-4z"/></svg>')}")`;
+ let h=`<div class="sky" style="height:${SKY}px"></div>`;
+ h+=`<div class="pix" style="left:72%;top:${SKY*.12}px;width:70px"><svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path fill="#fff4b0" d="M2 0h4v1h1v1h1v4H7v1H6v1H2V7H1V6H0V2h1V1h1z"/><path fill="#ffe27a" d="M2 1h4v1h1v4H6v1H2V6H1V2h1z"/></svg></div>`;
+ [[.18,140,48],[.34,110,70],[.08,90,95],[.5,160,60]].forEach(([y,w,d],i)=>h+=`<div class="pix cloud" style="top:${SKY*y}px;width:${w}px;animation-duration:${d}s;animation-delay:${-i*17}s">${SPR.cloud}</div>`);
+ h+=`<div class="sea" style="top:${SKY}px;height:${7000*K+H*1.2}px"></div>`;
+ h+=`<div class="waves" style="top:${SKY-12}px;background-image:${wave}"></div><div class="waves b" style="top:${SKY-12}px;background-image:${wave}"></div>`;
+ h+=`<div class="pix boat" style="left:calc(50% - 150px);top:${SKY-38}px;width:110px">${SPR.boat}</div>`;
+ for(let i=0;i<6;i++)h+=`<div class="ray" style="left:${8+i*16}%;top:${SKY+4}px;height:${H*.9}px;animation-delay:${-i*1.3}s"></div>`;
+ ZONES.forEach(([m,n])=>h+=`<div class="zl" style="top:${SKY+m*K+20}px">${n} · ${fmt(m)} m</div>`);
+ for(let i=0;i<22;i++){const m=rnd(40,6800),t=m/7000,col=`hsl(${200+t*20} ${55-t*25}% ${34-t*24}%)`,n=Math.floor(rnd(2,7)),sz=rnd(18,34)*(1-t*.4);
+  let f='';for(let j=0;j<n;j++)f+=`<div style="left:${rnd(0,90)}px;top:${rnd(0,40)}px;width:${sz}px;animation-delay:${-rnd(0,2)}s">${sil(col)}</div>`;
+  h+=`<div class="school${Math.random()<.5?' rev':''}" style="top:${SKY+m*K}px;animation-duration:${rnd(22,55)}s;animation-delay:${-rnd(0,50)}s"><div class="fishes">${f}</div></div>`}
+ for(let i=0;i<7;i++)h+=`<div class="pix jelly" style="left:${rnd(4,90)}%;top:${SKY+rnd(900,4200)*K}px;width:${rnd(26,44)}px;opacity:.75;animation-delay:${-rnd(0,5)}s">${SPR.jelly}</div>`;
+ for(let i=0;i<90;i++)h+=`<i class="glow${Math.random()<.35?' p':''}" style="left:${rnd(1,99)}%;top:${SKY+rnd(2200,7100)*K}px;animation-delay:${-rnd(0,3)}s;animation-duration:${rnd(2,5)}s"></i>`;
+ for(let i=0;i<9;i++)h+=`<div class="pix" style="left:${i*12-3}%;top:${FL+8}px;width:${rnd(110,170)}px">${SPR.rock}</div>`;
+ for(let i=0;i<12;i++)h+=`<div class="pix kelp" style="left:${rnd(0,97)}%;top:${FL-60}px;width:${rnd(14,20)}px;animation-delay:${-rnd(0,4)}s">${SPR.kelp}</div>`;
+ h+=`<div class="floorlbl" style="top:${FL-110}px">Trench floor · 7,000 m</div>`;
+ layer.style.height=(FL+H*1.4)+'px';layer.innerHTML=h;
+ let r='<div class="ln"></div>';for(let m=0;m<=7000;m+=500){r+=`<div class="tk${m%1000?'':' big'}" style="top:${m/70}%">${m%1000?'':`<span>${m?m/1000+'k':'0'}</span>`}</div>`}r+='<div id="mark"></div>';$('ruler').innerHTML=r;
+ $('streaks').innerHTML=Array.from({length:46},()=>`<i style="left:${rnd(0,100)}%;height:${rnd(40,160)}px;--k:${rnd(.6,1.6).toFixed(2)};animation-delay:${-rnd(0,2)}s;opacity:${rnd(.3,1).toFixed(2)}"></i>`).join('');
+ $('snow').innerHTML=Array.from({length:40},()=>`<i style="left:${rnd(0,100)}%;animation-duration:${rnd(9,20)}s;animation-delay:${-rnd(0,20)}s"></i>`).join('');
+}
+function cam(y,dur,ease='cubic-bezier(.45,0,.2,1)'){layer.style.transition=RM||!dur?'none':`transform ${dur}s ${ease}`;layer.style.transform=`translate3d(0,${-y}px,0)`;camY=y}
+const yFor=m=>SKY+m*K-FOCUS;
+const introY=()=>SKY-H*.5;
+
+/* ---------- state + HUD ---------- */
+let st={i:0,picks:[],pts:0,phase:'intro'},shownM=0;const TOP=92;
+const V=m=>30+m*0.995;               /* visual depth of the sub for a score depth */
+function rollNum(el,from,to,dur,f=x=>fmt(x)+' m'){if(!el)return;if(RM||!dur){el.textContent=f(to);return}const t0=performance.now();const step=t=>{const k=Math.min(1,(t-t0)/(dur*1000)),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;el.textContent=f(from+(to-from)*e);if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
+function depthTo(m,dur){const mk=$('mark');mk.style.transitionDuration=(dur||0)+'s';mk.style.top=(m/70)+'%';rollNum($('depth'),shownM,m,dur);clearTimeout(depthTo.t);depthTo.t=setTimeout(()=>$('zl').textContent=zoneOf(m),RM?0:(dur||0)*900);shownM=m;document.documentElement.style.setProperty('--d',Math.min(1,m/7000).toFixed(3))}
+function setFocus(f,dur){FOCUS=f;subEl.style.transition=RM||!dur?'opacity .5s':`top ${dur}s cubic-bezier(.45,0,.2,1),opacity .5s`;subEl.style.top=(f-22)+'px'}
+function lamp(m){subEl.style.setProperty('--lamp',Math.max(0,Math.min(1,(m-120)/700)).toFixed(2))}
+const wait=ms=>new Promise(r=>setTimeout(r,RM?0:ms));
+
+/* ---------- fx ---------- */
+function subXY(){const r=$('subspr').getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}
+function bubbles(n,spread=1){if(RM)return;const [x,y]=subXY();for(let i=0;i<n;i++){const b=document.createElement('i');b.className='bub';const s=rnd(4,10);b.style.cssText=`left:${x+rnd(10,34)*spread}px;top:${y+rnd(-8,8)}px;width:${s}px;height:${s}px;--x:${rnd(-30,30)}px;animation-duration:${rnd(1,2.2)}s;animation-delay:${rnd(0,.6)}s`;document.body.appendChild(b);setTimeout(()=>b.remove(),3200)}}
+function splash(){if(RM)return;const [x,y]=subXY();const r=document.createElement('i');r.className='sring';r.style.cssText=`left:${x}px;top:${y}px`;document.body.appendChild(r);setTimeout(()=>r.remove(),1200);
+ for(let i=0;i<26;i++){const d=document.createElement('i');d.className='drop';const s=rnd(4,9);d.style.cssText=`left:${x+rnd(-20,20)}px;top:${y}px;width:${s}px;height:${s}px;--x:${rnd(-140,140)}px;--y:${rnd(-170,-60)}px;animation-duration:${rnd(.8,1.3)}s`;document.body.appendChild(d);setTimeout(()=>d.remove(),1500)}}
+function sonar(){if(RM)return;const [x,y]=subXY();for(let i=0;i<3;i++){const r=document.createElement('i');r.className='ring';r.style.cssText=`left:${x}px;top:${y}px;animation-delay:${i*.25}s`;document.body.appendChild(r);setTimeout(()=>r.remove(),2200)}}
+function burst(el,n,sp){if(RM||!el)return;const r=el.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;for(let i=0;i<n;i++){const p=document.createElement('div');p.className='prt';const a=rnd(0,Math.PI*2),d=rnd(120,Math.max(innerWidth,innerHeight)*.6);p.style.cssText=`left:${x-17}px;top:${y-12}px;width:${rnd(18,40)}px;--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d}px;--r:${rnd(-540,540)}deg;animation-duration:${rnd(1.1,2.2)}s`;p.innerHTML=SPR[sp];document.body.appendChild(p);setTimeout(()=>p.remove(),2400)}}
+function dashSchool(){if(RM)return;for(let i=0;i<9;i++){const f=document.createElement('div');f.className='dash';f.style.cssText=`top:${rnd(20,80)}vh;width:${rnd(30,54)}px;animation-duration:${rnd(1,1.6)}s;animation-delay:${rnd(0,.5)}s;left:0`;f.innerHTML=SPR.fish;document.body.appendChild(f);setTimeout(()=>f.remove(),2400)}}
+function shake(){if(RM)return;for(const el of [main,$('world')]){el.classList.remove('shake');void el.offsetWidth;el.classList.add('shake')}}
+function flash(o=.5){if(RM)return;$('flash').animate([{opacity:o},{opacity:0}],{duration:500,easing:'ease-out'})}
+function dim(on){$('dim').style.opacity=on?.45:0}
+function streaks(on,sp=.7){const s=$('streaks');s.style.setProperty('--sp',sp+'s');s.classList.toggle('on',on&&!RM)}
+function zoneBanner(name){if(RM)return;const z=$('zb');z.innerHTML=`<small>Entering the</small><b>${esc(name)}</b>`;z.classList.remove('go');void z.offsetWidth;z.classList.add('go');tone(523,.25,{type:'triangle',vol:.06});tone(784,.35,{type:'triangle',vol:.06,delay:.12})}
+function swap(html,after){stage.classList.add('out');setTimeout(()=>{stage.className='panel';stage.innerHTML=html;stage.style.animation='none';void stage.offsetWidth;stage.style.animation='';after&&after()},RM||stage.dataset.hidden?0:330);delete stage.dataset.hidden}
+function hidePanel(){stage.classList.add('out');stage.dataset.hidden='1'}
+
+/* ---------- the dive ---------- */
+async function descend(fromM,toM){
+  const gain=toM-fromM;hidePanel();
+  setFocus(innerHeight*.4,.7);cam(yFor(V(fromM)),.7);await wait(700);
+  const dr=$('dread');dr.classList.add('on');$('drn').textContent=fmt(fromM)+' m';
+  if(gain<=0){$('drl').textContent='Holding depth';await wait(1100);dr.classList.remove('on')}
+  else{
+    const dur=RM?0:1.9+gain/1000*2.6;$('drl').textContent='Descending';
+    subEl.classList.add('dive');streaks(true,Math.max(.35,1.1-gain/1000*.7));SFX.hum(dur);SFX.whoosh(dur);
+    cam(yFor(V(toM)),dur,'cubic-bezier(.6,0,.25,1)');depthTo(toM,dur);lamp(toM);rollNum($('drn'),fromM,toM,dur);
+    const bi=setInterval(()=>bubbles(2,.6),140);
+    for(const [m,n] of ZONES)if(m>fromM&&m<=toM){const f=(m-fromM)/gain;setTimeout(()=>zoneBanner(n),(.25+f*.65)*dur*1000)}
+    if(toM>=7000)setTimeout(()=>{shake();SFX.thud()},dur*1000-120);
+    await wait(dur*1000);clearInterval(bi);streaks(false);subEl.classList.remove('dive');bubbles(8);
+    await wait(500);dr.classList.remove('on')}
+  setFocus(TOP,.7);cam(yFor(V(toM)),.7);await wait(650);
+}
+
+/* ---------- screens ---------- */
+function intro(first){
+ TM.stop();st={i:0,picks:[],pts:0,phase:'intro'};
+ main.className='intro';$('top').innerHTML=`<div class="hero" id="hero"><h1 class="title">One in a Krillion</h1><div class="ed">The Highlander Edition</div><p>Seven prompts. 25 seconds apiece. The rarer your right answer, the deeper you sink.</p></div>`;
+ $('brand').classList.remove('on');$('snow').classList.add('off');dim(false);lamp(0);
+ subEl.classList.add('on');subEl.classList.remove('dive');setFocus(innerHeight*.5,0);
+ const html=`<button class="btn big" id="go"><span class="arw" style="width:18px">${SPR.arrow}</span>Begin the dive<span class="arw" style="width:18px">${SPR.arrow}</span></button>`;
+ const go=()=>{stage.classList.add('bare');$('go').onclick=begin};
+ if(first){stage.innerHTML=html;stage.classList.add('bare');go()}else swap(html,go);
+}
+async function begin(){
+ ac();st.phase='dive';$('go').disabled=true;$('hero').classList.add('out');hidePanel();
+ subEl.classList.add('dive');SFX.splash();splash();await wait(250);
+ $('brand').classList.add('on');$('snow').classList.remove('off');
+ window.scrollTo({top:0,behavior:'auto'});
+ streaks(true,.9);SFX.whoosh(1.9);SFX.hum(1.9);setFocus(innerHeight*.4,1.9);cam(yFor(V(0)),1.9,'cubic-bezier(.5,0,.25,1)');
+ const bi=setInterval(()=>bubbles(2,.6),140);await wait(1900);clearInterval(bi);streaks(false);subEl.classList.remove('dive');
+ main.className='';$('top').innerHTML='';
+ setFocus(TOP,.7);cam(yFor(V(0)),.7);await wait(650);ask();
+}
+
+const TM={iv:null,left:25,cur:25,start(s,tick,end){this.left=s;this.cur=s;this.tick=tick;this.end=end;this.resume()},
+ resume(){const base=this.left,t0=performance.now();clearInterval(this.iv);this.iv=setInterval(()=>{this.cur=Math.max(0,base-(performance.now()-t0)/1000);this.tick(this.cur);if(this.cur<=0){this.stop();this.end()}},100)},
+ pause(){clearInterval(this.iv);this.left=this.cur},stop(){clearInterval(this.iv)}};
+
+function ask(){
+ const c=CATS[st.i],T=25;let lastS=T;
+ const html=`<div class="qhead"><span class="qnum">Prompt ${st.i+1} / ${CATS.length}</span><div class="o2" id="o2"><small id="o2l">O₂</small><div class="cells">${'<i></i>'.repeat(25)}</div><span class="secs" id="sec">${T}</span></div></div>
+ <div class="prompt"><span id="pt"></span><span class="type"></span></div><p class="fine">${esc(c.hint)}</p><div id="slot"></div>`;
+ swap(html,()=>{
+  const pt=$('pt');if(RM)pt.textContent=c.prompt;else{let k=0;const ty=setInterval(()=>{pt.textContent=c.prompt.slice(0,++k);if(k%2)SFX.click();if(k>=c.prompt.length)clearInterval(ty)},28)}
+  const cells=[...stage.querySelectorAll('.cells i')];
+  const form=(val='')=>{$('slot').innerHTML=`<form class="ans" id="f" autocomplete="off"><label for="a" class="sr">Your answer</label><input id="a" placeholder="Type your answer" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="go"><button class="btn">Ping</button></form>`;const i=$('a');i.value=val;i.focus();i.setSelectionRange(val.length,val.length);$('f').onsubmit=e=>{e.preventDefault();submit(false)}};
+  form();
+  TM.start(T,left=>{const s=Math.ceil(left);if(s!==lastS){lastS=s;$('sec').textContent=s;cells.forEach((el,i)=>el.classList.toggle('off',i>=s));if(s<=6&&s>0)SFX.tick()}$('o2').classList.toggle('low',left<=6)},()=>submit(true));
+  function submit(timeout){
+   TM.pause();const raw=($('a')||{}).value?.trim()||'';
+   if(!raw)return done({miss:true,msg:timeout?'Out of oxygen. Time ran out.':'No answer.'},raw);
+   const r=judge(c,raw);
+   if(r.suggest)return suggest(r.suggest,raw,timeout);
+   done(r,raw);
+  }
+  function suggest(list,raw,timeout){
+   $('o2').classList.add('paused');$('o2l').textContent='Paused';SFX.hmm();
+   $('slot').innerHTML=`<div class="dym"><p class="dq">Hmm, <q>${esc(raw)}</q> isn't on the list. Did you mean…</p><div class="opts">${list.map((e,i)=>`<button class="btn opt" data-i="${i}"><span class="key">${i+1}</span>${esc(e.name)}</button>`).join('')}</div>
+   <button class="btn alt" id="none">${timeout||TM.left<=0?'No, none of these':'No, let me retype'}</button></div>`;
+   const opts=[...stage.querySelectorAll('.opt')];opts[0].focus();
+   const pickIt=i=>{document.removeEventListener('keydown',kd);done({entry:list[i],chosen:true},raw)};
+   opts.forEach(b=>b.onclick=()=>{SFX.click();pickIt(+b.dataset.i)});
+   const kd=e=>{const n=+e.key;if(n>=1&&n<=list.length){e.preventDefault();pickIt(n-1)}};document.addEventListener('keydown',kd);
+   $('none').onclick=()=>{document.removeEventListener('keydown',kd);SFX.click();
+    if(timeout||TM.left<=0)return done({miss:true,msg:'Not on our list.'},raw);
+    $('o2').classList.remove('paused');$('o2l').textContent='O₂';form(raw);TM.resume()};
+  }
+  function done(r,raw){TM.stop();document.querySelectorAll('.opt').forEach(b=>b.disabled=true);st.picks.push({cat:c,raw,...r});
+   if(!raw)return reveal();
+   $('slot').innerHTML=`<div class="scan"><span>Sonar scanning</span><span class="dots"></span></div>`;SFX.ping();sonar();setTimeout(reveal,RM?0:1000)}
+ });
+}
+
+function reveal(){
+ const p=st.picks[st.picks.length-1],last=st.i===CATS.length-1,fromM=st.pts*10;
+ let html,cls,t;
+ const nx=`<div class="row nx"><button class="btn" id="nx"><span class="arw" style="width:16px">${SPR.arrow}</span>${last?'Final descent':'Keep diving'}</button></div>`;
+ if(p.entry){t=TI[p.entry.tier];cls='t-'+t.id;st.pts+=t.pts;
+  html=`<div class="rv"><div class="radar"><div class="crit">${sprite(t.id)}</div></div><div><p class="stamp" style="--c:${t.col}">${t.name}</p><div class="gain"><span id="gp">+0</span> pts · <span id="gm">0 m</span> deeper</div>
+  <p class="yours">You said <q>${esc(p.raw)}</q>${norm(p.raw)!==norm(p.entry.name)?` → counted as <b>${esc(p.entry.name)}</b>`:''}</p>${p.entry.note?`<p class="fine yours">${esc(p.entry.note)}</p>`:''}<p class="muted yours">${t.say}</p></div></div>${nx}`;
+ }else{cls='miss';
+  html=`<div class="rv"><div class="radar"><div class="crit">${sprite('fish')}</div></div><div><p class="stamp">Washed away</p><div class="gain" style="color:var(--soft)">+0 pts</div>${p.raw?`<p class="yours">You said <q>${esc(p.raw)}</q>. ${esc(p.msg)}</p>`:`<p class="yours">${esc(p.msg)}</p>`}</div></div>${nx}`}
+ swap(html,()=>{
+  stage.classList.add(cls);
+  if(t){setTimeout(()=>{rollNum($('gp'),0,t.pts,.8,x=>'+'+Math.round(x));rollNum($('gm'),0,t.pts*10,.8);
+    const ti=TIERS.indexOf(t);if(t.id==='krill'){SFX.krill();shake();flash(.6);burst(stage.querySelector('.radar'),36,'krill')}else SFX.reveal(ti);
+    if(t.id==='schooler')dashSchool();if(t.id==='plankton')burst(stage.querySelector('.radar'),8,'plankton');if(t.id==='rare')flash(.18);
+    if(t.id==='deep'){dim(true);setTimeout(()=>dim(false),1800)}},RM?0:550)}
+  else setTimeout(()=>{SFX.miss();stage.classList.add('wob')},RM?0:300);
+  const b=$('nx');b.focus({preventScroll:true});
+  b.onclick=async()=>{b.disabled=true;SFX.click();await descend(fromM,st.pts*10);if(last)finish();else{st.i++;ask()}};
+ });
+}
+
+function finish(){
+ const m=st.pts*10,z=zoneOf(m),hits=st.picks.filter(p=>p.entry).length,best=st.picks.filter(p=>p.entry).sort((a,b)=>b.entry.pts-a.entry.pts)[0];
+ const blurb=m>=7000?'A perfect dive. Every answer was one in a krillion.':m>=6000?'Below the abyss. Hardly anyone gets here.':m>=4000?'Cold, dark and very impressive.':m>=1000?'No sunlight down here, just good answers.':m>=200?'You got past the obvious stuff.':'Still splashing around near the surface.';
+ const mark={plankton:'🦠',clever:'🐡',schooler:'🐟',rare:'🐢',deep:'🦑',krill:'🦐'};
+ const share=`One in a Krillion · Highlander Edition\n${st.picks.map(p=>p.entry?mark[p.entry.tier]:'💧').join('')}\n${st.pts} pts · ${fmt(m)} m · ${z}`;
+ const html=`<p class="stamp" style="--c:var(--cy)">Dive complete</p><h2 style="margin-top:8px">${z}</h2><p class="muted">${blurb}${best?` Deepest answer: <b>${esc(best.entry.name)}</b>.`:''}</p>
+ <div class="total"><div><b id="fp">0</b><span>points of 700</span></div><div><b id="fm">0 m</b><span>dive depth</span></div><div><b>${hits}/7</b><span>answers on the list</span></div></div>
+ <div class="log">${st.picks.map((p,i)=>{const t=p.entry&&TI[p.entry.tier];return `<div class="rung" style="animation-delay:${.5+i*.12}s">${t?sprite(t.id):'<div class="spr" style="opacity:.35">'+SPR.fish+'</div>'}<div><b>${esc(p.cat.prompt)}</b><span>${p.raw?esc(p.raw):'(no answer)'}${t?` · ${t.name}`:` · ${esc(p.msg)}`}</span></div><div class="pts" style="color:${t?t.col:'var(--soft)'}">${t?'+'+t.pts:'0'}</div></div>`}).join('')}</div>
+ <div class="row"><button class="btn" id="cp">Copy my results</button><button class="btn alt" id="again">Dive again</button><span class="copied" id="ok" role="status"></span></div>
+ <div class="bank"><h3>The full word bank</h3><p class="fine">Every answer we accept, sorted by how deep it takes you. ${fmt(TOTAL)} in all.</p>
+ ${CATS.map(c=>`<details><summary>${esc(c.prompt)}<small>${c.entries.length} answers</small></summary>${TIERS.map(t=>{const l=c.entries.filter(e=>e.tier===t.id);return l.length?`<div class="tb"><h4>${sprite(t.id)}<span style="color:${t.col}">${t.name}</span> <span class="fine">· ${t.pts} pts</span></h4><p>${l.map(e=>esc(e.name)).join(' · ')}</p></div>`:''}).join('')}</details>`).join('')}</div>`;
+ swap(html,()=>{SFX.done();rollNum($('fp'),0,st.pts,1.4,x=>Math.round(x));rollNum($('fm'),0,m,1.4);if(m>=7000)burst(stage.querySelector('.stamp'),40,'krill');
+  $('again').onclick=async()=>{SFX.click();hidePanel();window.scrollTo({top:0});streaks(true,.5);$('streaks').classList.add('up');SFX.whoosh(2.2);
+   const bi=setInterval(()=>bubbles(3,.8),120);setFocus(innerHeight*.5,2.2);cam(introY(),2.2,'cubic-bezier(.6,0,.3,1)');depthTo(0,2.2);lamp(0);
+   await wait(2200);clearInterval(bi);streaks(false);$('streaks').classList.remove('up');SFX.splash();intro(false)};
+  $('cp').onclick=async()=>{try{await navigator.clipboard.writeText(share);$('ok').textContent='Copied!'}catch(e){$('ok').textContent=share.replace(/\n/g,' / ')}}});
+}
+
+$('subspr').innerHTML=SPR.sub;
+buildWorld();cam(introY(),0);depthTo(0,0);
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{buildWorld();if(st.phase==='intro'){setFocus(innerHeight*.5,0);cam(introY(),0)}else{setFocus(TOP,0);cam(yFor(V(shownM)),0)}$('mark').style.top=(shownM/70)+'%'},200)});
+intro(true);
+}
+</script>
+</body>
+</html>
